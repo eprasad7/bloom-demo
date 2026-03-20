@@ -1,16 +1,20 @@
 import type { NextConfig } from "next";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:8000";
-
 const nextConfig: NextConfig = {
   output: "standalone",
+  // In development, proxy API calls to the local backend.
+  // In production (Railway), the frontend calls the backend directly
+  // via NEXT_PUBLIC_API_URL set at build time.
   async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${BACKEND_URL}/api/:path*`,
-      },
-    ];
+    if (process.env.NODE_ENV === "development") {
+      return [
+        {
+          source: "/api/:path*",
+          destination: "http://127.0.0.1:8000/api/:path*",
+        },
+      ];
+    }
+    return [];
   },
 };
 

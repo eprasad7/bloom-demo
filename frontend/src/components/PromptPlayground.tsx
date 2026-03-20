@@ -44,7 +44,8 @@ export function PromptPlayground({
     if (apiKey) headers["x-api-key"] = apiKey;
 
     try {
-      const res = await fetch("/api/chat/playground", {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+      const res = await fetch(`${apiBase}/api/chat/playground`, {
         method: "POST",
         headers,
         body: JSON.stringify({

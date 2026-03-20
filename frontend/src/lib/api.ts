@@ -30,6 +30,10 @@ export interface StreamCallbacks {
   onError: (message: string) => void;
 }
 
+// In production, call backend directly via public URL.
+// In development, Next.js rewrites proxy /api/* to localhost:8000.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
 export async function sendMessageStream(
   message: string,
   sessionId: string | null,
@@ -43,7 +47,7 @@ export async function sendMessageStream(
     headers["x-api-key"] = apiKey;
   }
 
-  const res = await fetch("/api/chat/stream", {
+  const res = await fetch(`${API_BASE}/api/chat/stream`, {
     method: "POST",
     headers,
     body: JSON.stringify({ message, session_id: sessionId }),
