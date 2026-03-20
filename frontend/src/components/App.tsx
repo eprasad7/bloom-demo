@@ -5,11 +5,11 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { GuardrailInspector } from "@/components/GuardrailInspector";
 import { CareJourney } from "@/components/CareJourney";
 import { ScenarioBar } from "@/components/ScenarioBar";
-import { AuditLog } from "@/components/AuditLog";
 import { ICD10Panel } from "@/components/ICD10Panel";
 import { ShieldIcon } from "@/components/Icons";
 import { PromptPlayground } from "@/components/PromptPlayground";
 import { MemoryPanel } from "@/components/MemoryPanel";
+import { MetricsPanel } from "@/components/MetricsPanel";
 import { RAGVisualizer } from "@/components/RAGVisualizer";
 import { UrgencyBadge } from "@/components/UrgencyBadge";
 import { sendMessageStream } from "@/lib/api";
@@ -29,7 +29,7 @@ import type {
   RiskLevel,
 } from "@/lib/types";
 
-type RightPanel = "guardrails" | "rag" | "journey" | "memory" | "audit";
+type RightPanel = "guardrails" | "rag" | "journey" | "memory" | "metrics";
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -44,6 +44,9 @@ export default function App() {
   const [urgency, setUrgency] = useState<UrgencyPrediction | null>(null);
   const [patientMemories, setPatientMemories] = useState<PatientMemory[]>([]);
   const [patientContext, setPatientContext] = useState<PatientContext | null>(null);
+  const [evalHistory, setEvalHistory] = useState<EvalScores[]>([]);
+  const [allAuditEvents, setAllAuditEvents] = useState<AuditEvent[]>([]);
+  const [guardrailTriggerCount, setGuardrailTriggerCount] = useState(0);
   const [ragGuidelines, setRagGuidelines] = useState<RetrievedGuideline[]>([]);
   const [ragContext, setRagContext] = useState<RAGContext | null>(null);
   const [evalScores, setEvalScores] = useState<EvalScores | null>(null);
@@ -203,8 +206,18 @@ export default function App() {
           },
 
           onJourney: (entries) => setJourney(entries),
-          onEval: (scores) => setEvalScores(scores),
-          onAudit: (events) => setAuditEvents(events),
+          onEval: (scores) => {
+            setEvalScores(scores);
+            if (scores.faithfulness >= 0) setEvalHistory((prev) => [...prev, scores]);
+          },
+          onAudit: (events) => {
+            setAuditEvents(events);
+            setAllAuditEvents((prev) => [...prev, ...events]);
+            const triggers = events.filter(
+              e => (e.event_type === "input_rail" || e.event_type === "output_rail") && e.risk_level !== "safe"
+            );
+            if (triggers.length > 0) setGuardrailTriggerCount((c) => c + triggers.length);
+          },
 
           onDone: () => {
             const finalRisk: RiskLevel =
@@ -274,7 +287,7 @@ export default function App() {
     { key: "rag" as const, label: "RAG" },
     { key: "journey" as const, label: "Journey" },
     { key: "memory" as const, label: "Memory" },
-    { key: "audit" as const, label: "Audit" },
+    { key: "metrics" as const, label: "Metrics" },
   ];
 
   return (
@@ -466,8 +479,8 @@ export default function App() {
                   ? ragGuidelines.length
                   : tab.key === "journey"
                     ? journey.length
-                    : tab.key === "audit"
-                      ? auditEvents.length
+                    : tab.key === "metrics"
+                      ? allAuditEvents.length
                       : 0;
               return (
                 <button
@@ -540,7 +553,15 @@ export default function App() {
                 }}
               />
             ) : (
-              <AuditLog events={auditEvents} />
+              <MetricsPanel
+                data={{
+                  auditEvents: allAuditEvents,
+                  evalHistory,
+                  messageCount: messages.length,
+                  guardrailTriggers: guardrailTriggerCount,
+                  totalMessages: messages.filter(m => m.role === "user").length,
+                }}
+              />
             )}
           </div>
 
