@@ -120,7 +120,8 @@ class AutoEvolveRequest(BaseModel):
     message: str
     system_prompt: str
     target_faithfulness: float = 0.75
-    max_iterations: int = 3
+    max_iterations: int = 5
+    test_questions: list[str] | None = None
 
 
 @app.post("/api/chat/playground")
@@ -171,92 +172,191 @@ async def chat_playground(
 async def auto_evolve(
     request: AutoEvolveRequest,
     x_api_key: str | None = Header(None),
-) -> dict:
-    """Auto-iterate on the system prompt until faithfulness reaches the target.
+) -> StreamingResponse:
+    """Autonomous prompt evolution agent (inspired by Karpathy's autoresearch).
 
-    Each iteration:
-      1. Run the question through the pipeline
-      2. Eval the response
-      3. If faithfulness < target, ask Claude to rewrite the prompt
-      4. Repeat until target met or max_iterations reached
+    Streams SSE events as the agent iterates:
+      1. Generate response with current prompt
+      2. Eval faithfulness + relevance (fixed eval function, agent can't touch it)
+      3. If below target, agent proposes a strategy and rewrites the prompt
+      4. Keep if improved, discard if regressed
+      5. Test against multiple questions for robustness
+      6. Repeat until target met or max_iterations reached
 
-    Returns the full iteration history.
+    The eval function is the "read-only ground truth" (like evaluate_bpb in autoresearch).
+    The agent can only modify the system prompt (like train.py in autoresearch).
     """
+    import json
+
     from app.services.eval import evaluate_response
     from app.services.rag import format_guidelines_for_prompt, retrieve_guidelines
     from app.services.prompts import RAG_CONTEXT_TEMPLATE
 
     client = _get_client(x_api_key)
-    iterations = []
-    current_prompt = request.system_prompt
 
-    for i in range(request.max_iterations):
-        # Retrieve
-        guidelines = retrieve_guidelines(request.message, n_results=3)
-        guidelines_text = format_guidelines_for_prompt(guidelines)
+    test_questions = request.test_questions or [
+        request.message,
+        "What are the warning signs of preeclampsia?",
+        "Is it safe to exercise during pregnancy?",
+    ]
 
-        system = current_prompt
-        if guidelines_text:
-            system += "\n\n" + RAG_CONTEXT_TEMPLATE.format(guidelines=guidelines_text)
+    # Strategies the agent cycles through
+    strategies = [
+        "Add an explicit rule: 'ONLY state facts that appear in the retrieved guidelines. If the guidelines do not cover a topic, say you do not have enough information rather than adding general knowledge.'",
+        "Add to response format: 'Every factual claim must have an inline citation [1], [2], etc. If you cannot cite a specific guideline for a claim, do not include it.'",
+        "Restructure: separate the response into two clearly labeled sections: (1) 'Based on clinical guidelines' with only cited information, and (2) 'General guidance' for any additional context, clearly marked as not from guidelines.",
+        "Add: 'Before responding, mentally check each sentence. If it contains medical information not directly from the retrieved guidelines, remove it. Err on the side of shorter, fully grounded responses.'",
+        "Simplify: 'Respond in 2-3 sentences maximum. Only include the most directly relevant information from the retrieved guidelines. Cite every fact.'",
+    ]
 
-        # Generate
-        llm_response = await client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            system=system,
-            messages=[{"role": "user", "content": request.message}],
-        )
-        response_text = llm_response.content[0].text
+    async def stream():
+        def sse(event: str, data: dict) -> str:
+            return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
-        # Eval
-        eval_scores = await evaluate_response(
-            question=request.message,
-            answer=response_text,
-            retrieved_guidelines=guidelines,
-            client=client,
-        )
+        current_prompt = request.system_prompt
+        best_prompt = current_prompt
+        best_score = 0.0
+        iterations = []
 
-        iterations.append({
-            "iteration": i + 1,
-            "prompt_snippet": current_prompt[:100] + "...",
-            "response": response_text,
-            "faithfulness": eval_scores["faithfulness"],
-            "relevance": eval_scores["relevance"],
-            "reasoning": eval_scores["reasoning"],
+        yield sse("start", {
+            "max_iterations": request.max_iterations,
+            "target": request.target_faithfulness,
+            "test_questions": len(test_questions),
+            "strategies": len(strategies),
         })
 
-        # Check if target met
-        if eval_scores["faithfulness"] >= request.target_faithfulness:
-            break
+        for i in range(request.max_iterations):
+            strategy_used = strategies[i % len(strategies)] if i > 0 else "baseline (no modification)"
 
-        # Ask Claude to improve the prompt based on eval feedback
-        improve_response = await client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2048,
-            messages=[{
-                "role": "user",
-                "content": f"""You are a prompt engineer. The system prompt below produced a response that scored {eval_scores['faithfulness']:.0%} on faithfulness (target: {request.target_faithfulness:.0%}).
+            yield sse("iteration_start", {
+                "iteration": i + 1,
+                "strategy": strategy_used[:80] + "..." if len(strategy_used) > 80 else strategy_used,
+            })
 
-The eval judge said: "{eval_scores['reasoning']}"
+            # Eval across all test questions
+            question_scores = []
+            for qi, question in enumerate(test_questions):
+                guidelines = retrieve_guidelines(question, n_results=3)
+                guidelines_text = format_guidelines_for_prompt(guidelines)
 
-The key problem is the model is adding information not found in the retrieved clinical guidelines. Rewrite ONLY the response format section of the system prompt to enforce stricter grounding. Keep everything else the same.
+                system = current_prompt
+                if guidelines_text:
+                    system += "\n\n" + RAG_CONTEXT_TEMPLATE.format(guidelines=guidelines_text)
+
+                llm_response = await client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1024,
+                    system=system,
+                    messages=[{"role": "user", "content": question}],
+                )
+                response_text = llm_response.content[0].text
+
+                eval_scores = await evaluate_response(
+                    question=question,
+                    answer=response_text,
+                    retrieved_guidelines=guidelines,
+                    client=client,
+                )
+
+                question_scores.append({
+                    "question": question[:50] + "..." if len(question) > 50 else question,
+                    "faithfulness": eval_scores["faithfulness"],
+                    "relevance": eval_scores["relevance"],
+                    "reasoning": eval_scores["reasoning"],
+                })
+
+                yield sse("question_eval", {
+                    "iteration": i + 1,
+                    "question_index": qi + 1,
+                    "total_questions": len(test_questions),
+                    "faithfulness": eval_scores["faithfulness"],
+                    "relevance": eval_scores["relevance"],
+                })
+
+            # Average scores across all questions
+            avg_faith = sum(q["faithfulness"] for q in question_scores) / len(question_scores)
+            avg_rel = sum(q["relevance"] for q in question_scores) / len(question_scores)
+
+            # Keep or discard (autoresearch pattern)
+            status = "baseline"
+            if i > 0:
+                if avg_faith > best_score:
+                    status = "keep"
+                    best_score = avg_faith
+                    best_prompt = current_prompt
+                else:
+                    status = "discard"
+                    current_prompt = best_prompt  # rollback
+            else:
+                best_score = avg_faith
+                best_prompt = current_prompt
+
+            iteration_result = {
+                "iteration": i + 1,
+                "strategy": strategy_used,
+                "avg_faithfulness": round(avg_faith, 3),
+                "avg_relevance": round(avg_rel, 3),
+                "status": status,
+                "question_scores": question_scores,
+                "prompt_length": len(current_prompt),
+            }
+            iterations.append(iteration_result)
+
+            yield sse("iteration_complete", iteration_result)
+
+            # Check if target met
+            if avg_faith >= request.target_faithfulness:
+                yield sse("target_met", {
+                    "iteration": i + 1,
+                    "final_faithfulness": round(avg_faith, 3),
+                })
+                break
+
+            # Agent proposes next modification
+            if i < request.max_iterations - 1:
+                next_strategy = strategies[(i + 1) % len(strategies)]
+
+                improve_response = await client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=2048,
+                    messages=[{
+                        "role": "user",
+                        "content": f"""You are an autonomous prompt optimization agent. Your goal is to maximize faithfulness (currently {avg_faith:.0%}, target {request.target_faithfulness:.0%}).
+
+Eval feedback from {len(question_scores)} test questions:
+{chr(10).join(f"- Q: {q['question']} | F: {q['faithfulness']:.0%} | {q['reasoning']}" for q in question_scores)}
+
+Strategy to apply: {next_strategy}
 
 Current system prompt:
 ---
 {current_prompt}
 ---
 
-Return ONLY the complete rewritten system prompt, nothing else.""",
-            }],
-        )
-        current_prompt = improve_response.content[0].text.strip()
+Apply the strategy above to the system prompt. Return ONLY the complete rewritten system prompt.""",
+                    }],
+                )
+                current_prompt = improve_response.content[0].text.strip()
 
-    return {
-        "iterations": iterations,
-        "final_prompt": current_prompt,
-        "target_met": iterations[-1]["faithfulness"] >= request.target_faithfulness if iterations else False,
-        "final_faithfulness": iterations[-1]["faithfulness"] if iterations else 0,
-    }
+                yield sse("prompt_rewritten", {
+                    "iteration": i + 1,
+                    "new_prompt_length": len(current_prompt),
+                    "strategy_applied": next_strategy[:80],
+                })
+
+        yield sse("complete", {
+            "total_iterations": len(iterations),
+            "best_faithfulness": round(best_score, 3),
+            "target_met": best_score >= request.target_faithfulness,
+            "final_prompt": best_prompt,
+            "iterations": iterations,
+        })
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
 
 
 @app.post("/api/eval")

@@ -42,18 +42,16 @@ export function PromptPlayground({
   const [history, setHistory] = useState<EvalRun[]>([]);
   const [loading, setLoading] = useState(false);
   const [evolving, setEvolving] = useState(false);
-  const [evolveResult, setEvolveResult] = useState<{
-    iterations: Array<{
-      iteration: number;
-      faithfulness: number;
-      relevance: number;
-      reasoning: string;
-      response: string;
-    }>;
-    final_prompt: string;
-    target_met: boolean;
-    final_faithfulness: number;
-  } | null>(null);
+  const [evolveIterations, setEvolveIterations] = useState<Array<{
+    iteration: number;
+    strategy: string;
+    avg_faithfulness: number;
+    avg_relevance: number;
+    status: string;
+  }>>([]);
+  const [evolveStatus, setEvolveStatus] = useState<string>("");
+  const [evolveFinalPrompt, setEvolveFinalPrompt] = useState<string>("");
+  const [evolveTargetMet, setEvolveTargetMet] = useState(false);
   const [activeTab, setActiveTab] = useState<"response" | "sources">("response");
   const [runCount, setRunCount] = useState(0);
 
@@ -69,7 +67,7 @@ export function PromptPlayground({
     setTestResponse("");
     setEvalResult(null);
     setGuidelines([]);
-    setEvolveResult(null);
+    setEvolveIterations([]);
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
     try {
@@ -113,7 +111,10 @@ export function PromptPlayground({
   const autoEvolve = useCallback(async () => {
     if (evolving) return;
     setEvolving(true);
-    setEvolveResult(null);
+    setEvolveIterations([]);
+    setEvolveStatus("Starting autonomous agent...");
+    setEvolveFinalPrompt("");
+    setEvolveTargetMet(false);
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
     try {
@@ -124,30 +125,88 @@ export function PromptPlayground({
           message: testQuestion,
           system_prompt: systemPrompt,
           target_faithfulness: 0.75,
-          max_iterations: 3,
+          max_iterations: 5,
+          test_questions: [
+            testQuestion,
+            "What are the warning signs of preeclampsia?",
+            "Is it safe to exercise during pregnancy?",
+          ],
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setEvolveResult(data);
+      if (!res.ok || !res.body) {
+        setEvolveStatus("Failed to start");
+        setEvolving(false);
+        return;
+      }
 
-        // Add each iteration to history
-        for (const iter of data.iterations) {
-          const newRun: EvalRun = {
-            id: runCount + iter.iteration,
-            timestamp: new Date().toLocaleTimeString(),
-            question: `[Auto #${iter.iteration}] ${testQuestion.slice(0, 40)}...`,
-            faithfulness: iter.faithfulness,
-            relevance: iter.relevance,
-            reasoning: iter.reasoning,
-          };
-          setHistory((prev) => [newRun, ...prev]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        let currentEvent = "";
+        let currentData = "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7);
+          } else if (line.startsWith("data: ")) {
+            currentData = line.slice(6);
+          } else if (line === "" && currentEvent && currentData) {
+            try {
+              const data = JSON.parse(currentData);
+
+              if (currentEvent === "iteration_start") {
+                setEvolveStatus(`Iteration ${data.iteration}: ${data.strategy}`);
+              } else if (currentEvent === "question_eval") {
+                setEvolveStatus(
+                  `Iteration ${data.iteration}: testing question ${data.question_index}/${data.total_questions} (F: ${Math.round(data.faithfulness * 100)}%)`
+                );
+              } else if (currentEvent === "iteration_complete") {
+                setEvolveIterations((prev) => [...prev, {
+                  iteration: data.iteration,
+                  strategy: data.strategy,
+                  avg_faithfulness: data.avg_faithfulness,
+                  avg_relevance: data.avg_relevance,
+                  status: data.status,
+                }]);
+                const newRun: EvalRun = {
+                  id: runCount + data.iteration,
+                  timestamp: new Date().toLocaleTimeString(),
+                  question: `[Auto #${data.iteration}] ${data.status}`,
+                  faithfulness: data.avg_faithfulness,
+                  relevance: data.avg_relevance,
+                  reasoning: data.question_scores?.[0]?.reasoning ?? "",
+                };
+                setHistory((prev) => [newRun, ...prev]);
+              } else if (currentEvent === "prompt_rewritten") {
+                setEvolveStatus(`Iteration ${data.iteration}: prompt rewritten, testing next strategy...`);
+              } else if (currentEvent === "target_met") {
+                setEvolveTargetMet(true);
+                setEvolveStatus(`Target met at iteration ${data.iteration} (${Math.round(data.final_faithfulness * 100)}%)`);
+              } else if (currentEvent === "complete") {
+                setEvolveFinalPrompt(data.final_prompt);
+                setRunCount((c) => c + data.total_iterations);
+                if (!data.target_met) {
+                  setEvolveStatus(`Completed ${data.total_iterations} iterations. Best: ${Math.round(data.best_faithfulness * 100)}%`);
+                }
+              }
+            } catch { /* ignore parse errors */ }
+            currentEvent = "";
+            currentData = "";
+          }
         }
-        setRunCount((c) => c + data.iterations.length);
       }
     } catch (e) {
-      console.error("Auto-evolve failed:", e);
+      setEvolveStatus(`Error: ${e}`);
     } finally {
       setEvolving(false);
     }
@@ -311,63 +370,81 @@ export function PromptPlayground({
                           className="mt-3 w-full text-[11px] py-2.5 rounded-lg border border-maven-400/30 text-maven-400 hover:bg-maven-600/10 transition-colors disabled:opacity-30 flex items-center justify-center gap-2"
                         >
                           <BrainIcon size={12} />
-                          {evolving ? "Evolving prompt (up to 3 iterations)..." : "Auto-evolve prompt to 75% faithfulness"}
+                          {evolving ? "Agent running..." : "Auto-evolve (autoresearch pattern)"}
                         </button>
 
-                        {evolveResult && (
+                        {/* Live status */}
+                        {evolveStatus && (
+                          <p className={`mt-2 text-[10px] leading-snug ${evolving ? "text-maven-400 animate-pulse" : "text-text-muted"}`}>
+                            {evolveStatus}
+                          </p>
+                        )}
+
+                        {/* Iteration results */}
+                        {evolveIterations.length > 0 && (
                           <div className="mt-3 bg-maven-600/5 border border-maven-400/20 rounded-xl p-4 message-enter">
                             <div className="flex items-center justify-between mb-3">
                               <p className="text-[10px] font-semibold text-maven-400">
-                                Auto-Evolution Results
+                                Autonomous Evolution
                               </p>
-                              <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${
-                                evolveResult.target_met
-                                  ? "bg-status-safe/15 text-status-safe"
-                                  : "bg-status-caution/15 text-status-caution"
-                              }`}>
-                                {evolveResult.target_met ? "Target met" : "Target not met"}
-                              </span>
+                              {!evolving && (
+                                <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full ${
+                                  evolveTargetMet
+                                    ? "bg-status-safe/15 text-status-safe"
+                                    : "bg-status-caution/15 text-status-caution"
+                                }`}>
+                                  {evolveTargetMet ? "Target met" : "Best effort"}
+                                </span>
+                              )}
                             </div>
 
-                            {/* Iteration progress */}
-                            <div className="space-y-2 mb-3">
-                              {evolveResult.iterations.map((iter) => (
-                                <div key={iter.iteration} className="flex items-center gap-3">
-                                  <span className="text-[9px] font-mono text-text-muted w-4">
-                                    #{iter.iteration}
-                                  </span>
-                                  <div className="flex-1 h-1.5 bg-surface-primary rounded-full overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full transition-all ${
-                                        iter.faithfulness >= 0.75
-                                          ? "bg-status-safe"
-                                          : iter.faithfulness >= 0.5
-                                            ? "bg-status-caution"
-                                            : "bg-status-blocked"
-                                      }`}
-                                      style={{ width: `${iter.faithfulness * 100}%` }}
-                                    />
+                            <div className="space-y-1.5 mb-3">
+                              {evolveIterations.map((iter) => (
+                                <div key={iter.iteration} className="message-enter">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-mono text-text-muted w-4">#{iter.iteration}</span>
+                                    <div className="flex-1 h-1.5 bg-surface-primary rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-500 ${
+                                          iter.avg_faithfulness >= 0.75
+                                            ? "bg-status-safe"
+                                            : iter.avg_faithfulness >= 0.5
+                                              ? "bg-status-caution"
+                                              : "bg-status-blocked"
+                                        }`}
+                                        style={{ width: `${iter.avg_faithfulness * 100}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-[9px] font-mono text-text-secondary w-8 text-right">
+                                      {Math.round(iter.avg_faithfulness * 100)}%
+                                    </span>
+                                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-medium ${
+                                      iter.status === "keep" ? "bg-status-safe/15 text-status-safe"
+                                        : iter.status === "discard" ? "bg-status-blocked/15 text-status-blocked"
+                                        : "bg-surface-overlay text-text-muted"
+                                    }`}>
+                                      {iter.status}
+                                    </span>
                                   </div>
-                                  <span className="text-[9px] font-mono text-text-secondary w-8 text-right">
-                                    {Math.round(iter.faithfulness * 100)}%
-                                  </span>
+                                  <p className="text-[8px] text-text-muted ml-6 mt-0.5 truncate">
+                                    {iter.strategy.slice(0, 80)}
+                                  </p>
                                 </div>
                               ))}
                             </div>
 
-                            <p className="text-[10px] text-text-muted italic mb-3">
-                              {evolveResult.iterations[evolveResult.iterations.length - 1]?.reasoning}
-                            </p>
-
-                            <button
-                              onClick={() => {
-                                setSystemPrompt(evolveResult.final_prompt);
-                                setEvolveResult(null);
-                              }}
-                              className="w-full text-[11px] py-2 rounded-lg bg-maven-600 text-white hover:bg-maven-500 transition-colors"
-                            >
-                              Apply evolved prompt
-                            </button>
+                            {evolveFinalPrompt && !evolving && (
+                              <button
+                                onClick={() => {
+                                  setSystemPrompt(evolveFinalPrompt);
+                                  setEvolveIterations([]);
+                                  setEvolveStatus("");
+                                }}
+                                className="w-full text-[11px] py-2 rounded-lg bg-maven-600 text-white hover:bg-maven-500 transition-colors"
+                              >
+                                Apply best prompt
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
