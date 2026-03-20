@@ -122,4 +122,6 @@ export interface Message {
   risk_level?: RiskLevel;
   icd10_codes?: ICD10Code[];
   audit_log?: AuditEvent[];
+  eval_scores?: EvalScores;
+  original_question?: string;
 }

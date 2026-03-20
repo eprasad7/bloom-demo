@@ -69,6 +69,7 @@ export default function App() {
   const streamingTextRef = useRef("");
   const streamingThinkingRef = useRef("");
   const streamingGuidelinesRef = useRef<RetrievedGuideline[]>([]);
+  const streamingEvalRef = useRef<EvalScores | null>(null);
 
   // Restore conversation from backend on page reload
   useEffect(() => {
@@ -110,6 +111,7 @@ export default function App() {
       streamingTextRef.current = "";
       streamingThinkingRef.current = "";
       streamingGuidelinesRef.current = [];
+      streamingEvalRef.current = null;
       scrollToBottom();
 
       const assistantIdx = messages.length + 1;
@@ -243,6 +245,7 @@ export default function App() {
           onJourney: (entries) => setJourney(entries),
           onEval: (scores) => {
             setEvalScores(scores);
+            streamingEvalRef.current = scores;
             if (scores.faithfulness !== "error") setEvalHistory((prev) => [...prev, scores]);
           },
           onAudit: (events) => {
@@ -268,6 +271,8 @@ export default function App() {
                 thinking: streamingThinkingRef.current || undefined,
                 risk_level: finalRisk,
                 guidelines: streamingGuidelinesRef.current,
+                eval_scores: streamingEvalRef.current || undefined,
+                original_question: text,
                 guardrails: {
                   input_rails: inputRailResult!,
                   output_rails: outputRailResult,
@@ -510,7 +515,7 @@ export default function App() {
               </div>
             )}
             {messages.map((msg, i) => (
-              <ChatMessage key={i} message={msg} />
+              <ChatMessage key={i} message={msg} apiKey={apiKey} />
             ))}
             {loading && messages[messages.length - 1]?.content === "" && (
               <div className="flex justify-start mb-3">

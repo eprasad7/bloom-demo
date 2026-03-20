@@ -385,6 +385,72 @@ async def run_eval(x_api_key: str | None = Header(None)) -> dict:
     }
 
 
+class ImproveRequest(BaseModel):
+    message: str
+    original_response: str
+    faithfulness_reason: str
+    session_id: str | None = None
+
+
+@app.post("/api/chat/improve")
+async def improve_response(
+    request: ImproveRequest,
+    x_api_key: str | None = Header(None),
+) -> dict:
+    """Re-generate a response with a stricter grounding constraint.
+
+    Takes the original question and the eval feedback, then generates
+    a new response that only uses information from retrieved guidelines.
+    """
+    from app.services.eval import evaluate_response
+    from app.services.rag import retrieve_guidelines, format_guidelines_for_prompt
+    from app.services.prompts import MAVEN_SYSTEM_PROMPT, RAG_CONTEXT_TEMPLATE
+
+    client = _get_client(x_api_key)
+
+    guidelines = retrieve_guidelines(request.message, n_results=3)
+    guidelines_text = format_guidelines_for_prompt(guidelines)
+
+    stricter_prompt = MAVEN_SYSTEM_PROMPT + """
+
+## CRITICAL GROUNDING RULE (THIS OVERRIDES ALL OTHER INSTRUCTIONS)
+Your previous response failed a faithfulness evaluation. The eval judge said:
+"{reason}"
+
+For this response, you MUST:
+- ONLY state facts that appear word-for-word or paraphrased in the retrieved guidelines below
+- If the guidelines do not cover something the user asked about, say "I don't have specific guideline information about that" rather than adding general knowledge
+- Every medical fact must have an inline citation [1], [2], [3]
+- Keep the response short: 2 paragraphs maximum
+- Do NOT add practical tips, home remedies, or general advice unless they appear in the guidelines
+""".format(reason=request.faithfulness_reason)
+
+    if guidelines_text:
+        stricter_prompt += "\n\n" + RAG_CONTEXT_TEMPLATE.format(guidelines=guidelines_text)
+
+    llm_response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1024,
+        system=stricter_prompt,
+        messages=[{"role": "user", "content": request.message}],
+    )
+    improved_text = llm_response.content[0].text
+
+    eval_result = await evaluate_response(
+        question=request.message,
+        answer=improved_text,
+        retrieved_guidelines=guidelines,
+        client=client,
+    )
+
+    return {
+        "response": improved_text,
+        "eval": eval_result,
+        "guidelines": [g.model_dump() for g in guidelines],
+        "improved": eval_result["faithfulness"] == "pass",
+    }
+
+
 class SearchRequest(BaseModel):
     query: str
     n_results: int = 10
