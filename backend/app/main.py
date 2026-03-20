@@ -280,6 +280,228 @@ async def run_eval(x_api_key: str | None = Header(None)) -> dict:
     }
 
 
+class SearchRequest(BaseModel):
+    query: str
+    n_results: int = 10
+
+
+@app.post("/api/search")
+async def search_guidelines(request: SearchRequest) -> dict:
+    """Semantic search across all 137 clinical documents."""
+    from app.services.rag import retrieve_guidelines
+
+    results = retrieve_guidelines(request.query, n_results=request.n_results)
+    return {
+        "query": request.query,
+        "total_results": len(results),
+        "results": [r.model_dump() for r in results],
+    }
+
+
+class AgentRequest(BaseModel):
+    message: str
+    session_id: str | None = None
+
+
+@app.post("/api/agent/assess")
+async def agent_assess(
+    request: AgentRequest,
+    x_api_key: str | None = Header(None),
+) -> dict:
+    """Multi-step autonomous care assessment agent.
+
+    Executes a structured care assessment pipeline:
+      Step 1: Extract patient context (episodic memory)
+      Step 2: Classify urgency (ML model)
+      Step 3: Retrieve relevant guidelines (RAG)
+      Step 4: Generate clinical assessment (Sonnet + thinking)
+      Step 5: Run safety evaluation (Haiku judge)
+      Step 6: Recommend providers
+      Step 7: Create care plan summary
+
+    Returns the full execution trace with each step's output.
+    """
+    import time
+    from app.ml.urgency_classifier import predict_urgency
+    from app.services.memory import PatientContext
+    from app.services.recommendations import recommend_providers
+    from app.services.rag import retrieve_guidelines, format_guidelines_for_prompt
+    from app.services.icd10 import lookup_icd10_codes
+    from app.services.eval import evaluate_response
+    from app.services.guardrails import run_input_rails, run_output_rails
+    from app.services.prompts import MAVEN_SYSTEM_PROMPT, RAG_CONTEXT_TEMPLATE
+
+    client = _get_client(x_api_key)
+    steps = []
+    total_start = time.perf_counter()
+
+    def step(name: str, model: str, output: dict, latency_ms: float):
+        steps.append({
+            "step": len(steps) + 1,
+            "name": name,
+            "model": model,
+            "output": output,
+            "latency_ms": round(latency_ms, 1),
+        })
+
+    # Step 1: Safety check
+    t = time.perf_counter()
+    safety = run_input_rails(request.message)
+    step("Safety Check (Input Rails)", "regex engine", {
+        "risk_level": safety.risk_level.value,
+        "rails_triggered": safety.rails_triggered,
+        "passed": safety.risk_level.value == "safe",
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 2: Extract patient context
+    t = time.perf_counter()
+    ctx = PatientContext()
+    memories = ctx.update(request.message)
+    summary = ctx.to_summary()
+    step("Extract Patient Context", "regex NER", {
+        "facts_extracted": len(memories),
+        "pregnancy": summary["pregnancy"],
+        "symptoms": summary["symptoms"],
+        "conditions": summary["conditions"],
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 3: ML urgency classification
+    t = time.perf_counter()
+    urgency = predict_urgency(request.message)
+    step("Classify Urgency", "TF-IDF + GradientBoosting (sklearn)", {
+        "urgency_level": urgency["urgency_label"],
+        "confidence": urgency["confidence"],
+        "probabilities": urgency["probabilities"],
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 4: ICD-10 code lookup
+    t = time.perf_counter()
+    codes = lookup_icd10_codes(request.message)
+    step("ICD-10 Code Mapping", "keyword matcher", {
+        "codes_matched": len(codes),
+        "codes": codes[:3],
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 5: RAG retrieval
+    t = time.perf_counter()
+    guidelines = retrieve_guidelines(request.message, n_results=3)
+    guidelines_text = format_guidelines_for_prompt(guidelines)
+    step("Retrieve Clinical Guidelines", "ChromaDB + MiniLM-L6-v2", {
+        "documents_searched": 137,
+        "documents_retrieved": len(guidelines),
+        "top_sources": [g.source for g in guidelines],
+        "top_scores": [g.relevance_score for g in guidelines],
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 6: Generate clinical assessment (Sonnet with thinking)
+    t = time.perf_counter()
+    system = MAVEN_SYSTEM_PROMPT
+    if guidelines_text:
+        system += "\n\n" + RAG_CONTEXT_TEMPLATE.format(guidelines=guidelines_text)
+
+    llm_response = await client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=16000,
+        thinking={"type": "enabled", "budget_tokens": 3000},
+        system=system,
+        messages=[{"role": "user", "content": request.message}],
+    )
+
+    thinking_text = ""
+    response_text = ""
+    for block in llm_response.content:
+        if block.type == "thinking":
+            thinking_text = block.thinking
+        elif block.type == "text":
+            response_text = block.text
+
+    step("Generate Clinical Assessment", "Claude Sonnet 4 (extended thinking)", {
+        "thinking_tokens": len(thinking_text.split()),
+        "response_tokens": len(response_text.split()),
+        "thinking_preview": thinking_text[:200] + "..." if len(thinking_text) > 200 else thinking_text,
+        "response_preview": response_text[:200] + "..." if len(response_text) > 200 else response_text,
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 7: Output safety check
+    t = time.perf_counter()
+    output_safety = run_output_rails(response_text)
+    step("Safety Check (Output Rails)", "regex engine", {
+        "risk_level": output_safety.risk_level.value,
+        "rails_triggered": output_safety.rails_triggered,
+        "response_modified": output_safety.modified_response is not None,
+    }, (time.perf_counter() - t) * 1000)
+
+    final_response = output_safety.modified_response or response_text
+
+    # Step 8: Classify care pathway (Haiku)
+    t = time.perf_counter()
+    from app.services.prompts import ROUTING_PROMPT
+    pathway_result = await client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=20,
+        messages=[{"role": "user", "content": ROUTING_PROMPT.format(message=request.message)}],
+    )
+    pathway = pathway_result.content[0].text.strip().lower()
+    step("Classify Care Pathway", "Claude Haiku 4.5", {
+        "pathway": pathway,
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 9: Evaluate response (Haiku judge)
+    t = time.perf_counter()
+    eval_scores = await evaluate_response(
+        question=request.message,
+        answer=final_response,
+        retrieved_guidelines=guidelines,
+        client=client,
+    )
+    step("Evaluate Response Quality", "Claude Haiku 4.5 (LLM-as-judge)", {
+        "faithfulness": eval_scores["faithfulness"],
+        "relevance": eval_scores["relevance"],
+        "reasoning": eval_scores["reasoning"],
+    }, (time.perf_counter() - t) * 1000)
+
+    # Step 10: Provider recommendations
+    t = time.perf_counter()
+    recs = recommend_providers(
+        symptoms=summary["symptoms"],
+        conditions=summary["conditions"],
+        care_pathway=pathway,
+    )
+    step("Recommend Providers", "rule-based scoring engine", {
+        "providers_matched": len(recs),
+        "top_provider": recs[0]["title"] if recs else "None",
+        "providers": recs,
+    }, (time.perf_counter() - t) * 1000)
+
+    total_ms = (time.perf_counter() - total_start) * 1000
+
+    # Model orchestration summary
+    models_used = {}
+    for s in steps:
+        model = s["model"]
+        if model not in models_used:
+            models_used[model] = {"calls": 0, "total_ms": 0}
+        models_used[model]["calls"] += 1
+        models_used[model]["total_ms"] = round(models_used[model]["total_ms"] + s["latency_ms"], 1)
+
+    return {
+        "message": request.message,
+        "response": final_response,
+        "thinking": thinking_text,
+        "steps": steps,
+        "total_steps": len(steps),
+        "total_latency_ms": round(total_ms, 1),
+        "models_used": models_used,
+        "care_plan": {
+            "urgency": urgency["urgency_label"],
+            "pathway": pathway,
+            "recommended_providers": recs,
+            "icd10_codes": codes,
+            "eval_scores": eval_scores,
+        },
+    }
+
+
 @app.get("/api/sessions")
 async def list_all_sessions() -> list[dict]:
     """List all sessions with message counts."""

@@ -6,8 +6,10 @@ import { GuardrailInspector } from "@/components/GuardrailInspector";
 import { CareJourney } from "@/components/CareJourney";
 import { ScenarioBar } from "@/components/ScenarioBar";
 import { ICD10Panel } from "@/components/ICD10Panel";
+import { AgentPanel } from "@/components/AgentPanel";
 import { ShieldIcon } from "@/components/Icons";
 import { PromptPlayground } from "@/components/PromptPlayground";
+import { SearchPanel } from "@/components/SearchPanel";
 import { MemoryPanel } from "@/components/MemoryPanel";
 import { MetricsPanel } from "@/components/MetricsPanel";
 import { RAGVisualizer } from "@/components/RAGVisualizer";
@@ -60,6 +62,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState("");
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [showPlayground, setShowPlayground] = useState(false);
+  const [leftMode, setLeftMode] = useState<"chat" | "search" | "agent">("chat");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -442,8 +445,35 @@ export default function App() {
 
       {/* ── Main ── */}
       <div className="flex-1 flex min-h-0">
-        {/* ── Chat Panel ── */}
+        {/* ── Left Panel ── */}
         <div className="flex-[3] flex flex-col min-w-0">
+          {/* Mode tabs */}
+          <div className="shrink-0 flex border-b border-border-default bg-surface-elevated/50">
+            {(["chat", "search", "agent"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setLeftMode(mode)}
+                className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                  leftMode === mode
+                    ? "text-maven-400 border-b-2 border-maven-400"
+                    : "text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                {mode === "chat" ? "Chat" : mode === "search" ? "Search" : "Agent"}
+              </button>
+            ))}
+          </div>
+
+          {leftMode === "search" ? (
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <SearchPanel />
+            </div>
+          ) : leftMode === "agent" ? (
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <AgentPanel apiKey={apiKey} />
+            </div>
+          ) : (
+          <>
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-5 py-4">
             {messages.length === 0 && (
@@ -526,6 +556,8 @@ export default function App() {
               </button>
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* ── Right Panel ── */}
