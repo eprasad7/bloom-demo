@@ -311,6 +311,8 @@ async def process_message_stream(
         full_response = ""
         thinking_text = ""
 
+        in_thinking = False
+
         async with client.messages.stream(
             model="claude-sonnet-4-20250514",
             max_tokens=16000,
@@ -323,28 +325,30 @@ async def process_message_stream(
         ) as stream:
             async for event in stream:
                 if event.type == "content_block_start":
-                    if hasattr(event.content_block, "type"):
-                        if event.content_block.type == "thinking":
-                            yield sse("thinking_start", {})
-                        elif event.content_block.type == "text":
-                            if thinking_text:
-                                yield sse("thinking_end", {})
+                    block_type = getattr(event.content_block, "type", None)
+                    if block_type == "thinking":
+                        in_thinking = True
+                        yield sse("thinking_start", {})
+                    elif block_type == "text":
+                        if in_thinking:
+                            in_thinking = False
+                            yield sse("thinking_complete", {"text": thinking_text})
                 elif event.type == "content_block_delta":
-                    if hasattr(event.delta, "type"):
-                        if event.delta.type == "thinking_delta":
-                            thinking_text += event.delta.thinking
-                            yield sse("thinking", {"text": event.delta.thinking})
-                        elif event.delta.type == "text_delta":
-                            full_response += event.delta.text
-                            yield sse("token", {"text": event.delta.text})
+                    delta_type = getattr(event.delta, "type", None)
+                    if delta_type == "thinking_delta":
+                        chunk = getattr(event.delta, "thinking", "")
+                        thinking_text += chunk
+                        yield sse("thinking", {"text": chunk})
+                    elif delta_type == "text_delta":
+                        chunk = getattr(event.delta, "text", "")
+                        full_response += chunk
+                        yield sse("token", {"text": chunk})
 
         audit.log(
             "llm_call",
             f"Generated {len(full_response)} chars + {len(thinking_text)} thinking chars",
             timer_key="llm",
         )
-        if thinking_text:
-            yield sse("thinking_complete", {"text": thinking_text})
 
         # ── Output Rails ──
         audit.start_timer("output_rails")
