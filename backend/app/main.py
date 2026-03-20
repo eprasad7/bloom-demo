@@ -280,6 +280,27 @@ async def run_eval(x_api_key: str | None = Header(None)) -> dict:
     }
 
 
+@app.get("/api/sessions")
+async def list_all_sessions() -> list[dict]:
+    """List all sessions with message counts."""
+    from app.services.sessions import list_sessions
+    return await list_sessions()
+
+
+@app.get("/api/sessions/{session_id}")
+async def get_session(session_id: str) -> dict:
+    """Get full session detail with messages and journey."""
+    from app.services.sessions import get_session_detail
+    return await get_session_detail(session_id)
+
+
+@app.get("/api/memory/stats")
+async def memory_stats() -> dict:
+    """Get aggregate memory statistics."""
+    from app.services.sessions import get_memory_stats
+    return await get_memory_stats()
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "bloom-care-ai"}

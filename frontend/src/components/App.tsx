@@ -9,6 +9,7 @@ import { AuditLog } from "@/components/AuditLog";
 import { ICD10Panel } from "@/components/ICD10Panel";
 import { ShieldIcon } from "@/components/Icons";
 import { PromptPlayground } from "@/components/PromptPlayground";
+import { MemoryPanel } from "@/components/MemoryPanel";
 import { RAGVisualizer } from "@/components/RAGVisualizer";
 import { UrgencyBadge } from "@/components/UrgencyBadge";
 import { sendMessageStream } from "@/lib/api";
@@ -26,7 +27,7 @@ import type {
   RiskLevel,
 } from "@/lib/types";
 
-type RightPanel = "guardrails" | "rag" | "journey" | "audit";
+type RightPanel = "guardrails" | "rag" | "journey" | "memory" | "audit";
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -260,9 +261,10 @@ export default function App() {
   };
 
   const tabs = [
-    { key: "guardrails" as const, label: "Guardrails" },
+    { key: "guardrails" as const, label: "Guards" },
     { key: "rag" as const, label: "RAG" },
     { key: "journey" as const, label: "Journey" },
+    { key: "memory" as const, label: "Memory" },
     { key: "audit" as const, label: "Audit" },
   ];
 
@@ -512,6 +514,8 @@ export default function App() {
               />
             ) : rightPanel === "journey" ? (
               <CareJourney entries={journey} />
+            ) : rightPanel === "memory" ? (
+              <MemoryPanel currentSessionId={sessionId} />
             ) : (
               <AuditLog events={auditEvents} />
             )}
