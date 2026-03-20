@@ -116,6 +116,13 @@ class PlaygroundRequest(BaseModel):
     system_prompt: str
 
 
+class AutoEvolveRequest(BaseModel):
+    message: str
+    system_prompt: str
+    target_faithfulness: float = 0.75
+    max_iterations: int = 3
+
+
 @app.post("/api/chat/playground")
 async def chat_playground(
     request: PlaygroundRequest,
@@ -157,6 +164,98 @@ async def chat_playground(
         "response": response_text,
         "guidelines": [g.model_dump() for g in guidelines],
         "eval_scores": eval_scores,
+    }
+
+
+@app.post("/api/chat/auto-evolve")
+async def auto_evolve(
+    request: AutoEvolveRequest,
+    x_api_key: str | None = Header(None),
+) -> dict:
+    """Auto-iterate on the system prompt until faithfulness reaches the target.
+
+    Each iteration:
+      1. Run the question through the pipeline
+      2. Eval the response
+      3. If faithfulness < target, ask Claude to rewrite the prompt
+      4. Repeat until target met or max_iterations reached
+
+    Returns the full iteration history.
+    """
+    from app.services.eval import evaluate_response
+    from app.services.rag import format_guidelines_for_prompt, retrieve_guidelines
+    from app.services.prompts import RAG_CONTEXT_TEMPLATE
+
+    client = _get_client(x_api_key)
+    iterations = []
+    current_prompt = request.system_prompt
+
+    for i in range(request.max_iterations):
+        # Retrieve
+        guidelines = retrieve_guidelines(request.message, n_results=3)
+        guidelines_text = format_guidelines_for_prompt(guidelines)
+
+        system = current_prompt
+        if guidelines_text:
+            system += "\n\n" + RAG_CONTEXT_TEMPLATE.format(guidelines=guidelines_text)
+
+        # Generate
+        llm_response = await client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=system,
+            messages=[{"role": "user", "content": request.message}],
+        )
+        response_text = llm_response.content[0].text
+
+        # Eval
+        eval_scores = await evaluate_response(
+            question=request.message,
+            answer=response_text,
+            retrieved_guidelines=guidelines,
+            client=client,
+        )
+
+        iterations.append({
+            "iteration": i + 1,
+            "prompt_snippet": current_prompt[:100] + "...",
+            "response": response_text,
+            "faithfulness": eval_scores["faithfulness"],
+            "relevance": eval_scores["relevance"],
+            "reasoning": eval_scores["reasoning"],
+        })
+
+        # Check if target met
+        if eval_scores["faithfulness"] >= request.target_faithfulness:
+            break
+
+        # Ask Claude to improve the prompt based on eval feedback
+        improve_response = await client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            messages=[{
+                "role": "user",
+                "content": f"""You are a prompt engineer. The system prompt below produced a response that scored {eval_scores['faithfulness']:.0%} on faithfulness (target: {request.target_faithfulness:.0%}).
+
+The eval judge said: "{eval_scores['reasoning']}"
+
+The key problem is the model is adding information not found in the retrieved clinical guidelines. Rewrite ONLY the response format section of the system prompt to enforce stricter grounding. Keep everything else the same.
+
+Current system prompt:
+---
+{current_prompt}
+---
+
+Return ONLY the complete rewritten system prompt, nothing else.""",
+            }],
+        )
+        current_prompt = improve_response.content[0].text.strip()
+
+    return {
+        "iterations": iterations,
+        "final_prompt": current_prompt,
+        "target_met": iterations[-1]["faithfulness"] >= request.target_faithfulness if iterations else False,
+        "final_faithfulness": iterations[-1]["faithfulness"] if iterations else 0,
     }
 
 
