@@ -67,10 +67,16 @@ JAILBREAK_PATTERNS: list[str] = [
 # ── Diagnosis phrases (output rail) ──
 
 DIAGNOSIS_PHRASES: list[str] = [
-    "you have", "you are diagnosed", "this is likely",
-    "you're suffering from", "this means you have",
-    "based on your symptoms, it's", "you most likely have",
-    "i can confirm", "the diagnosis is",
+    "you are diagnosed",
+    "you're suffering from",
+    "this means you have",
+    "based on your symptoms, it's",
+    "you most likely have",
+    "i can confirm you have",
+    "the diagnosis is",
+    "you clearly have",
+    "you definitely have",
+    "i believe you have",
 ]
 
 # ── Unsafe medication phrases (output rail) ──
@@ -193,7 +199,7 @@ def run_output_rails(llm_response: str) -> GuardrailResult:
                 "I can share some general information about this topic, "
                 "but for anything specific to your situation, especially "
                 "regarding diagnoses or medications, please reach out to "
-                "your your provider who can review your full medical history.\n\n"
+                "your provider who can review your full medical history.\n\n"
                 "Would you like me to help you connect with a provider?"
             ),
             explanation="Output contained diagnosis or medication recommendation",
