@@ -16,6 +16,9 @@ export function ChatMessage({ message }: { message: Message }) {
   const riskLevel = message.risk_level ?? "safe";
   const [showThinking, setShowThinking] = useState(false);
 
+  // Hide empty assistant messages (placeholder during thinking phase)
+  if (!isUser && !message.content && !message.thinking) return null;
+
   return (
     <div
       className={`message-enter flex ${isUser ? "justify-end" : "justify-start"} mb-3`}
