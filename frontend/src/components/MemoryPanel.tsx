@@ -380,9 +380,9 @@ export function MemoryPanel({
                     Urgency: {liveData.urgency.urgency_label} ({Math.round(liveData.urgency.confidence * 100)}%)
                   </p>
                 )}
-                {liveData.evalScores && liveData.evalScores.faithfulness !== "error" && (
+                {liveData.evalScores && typeof liveData.evalScores.faithfulness === "string" && liveData.evalScores.faithfulness !== "error" && (
                   <p className="text-[9px] text-text-secondary">
-                    Eval: F={liveData.evalScores.faithfulness.toUpperCase()} R={liveData.evalScores.relevance.toUpperCase()} S={liveData.evalScores.safety.toUpperCase()}
+                    Eval: F={String(liveData.evalScores.faithfulness).toUpperCase()} R={String(liveData.evalScores.relevance).toUpperCase()} S={String(liveData.evalScores.safety ?? "?").toUpperCase()}
                   </p>
                 )}
                 {liveData.auditEvents.length === 0 && !liveData.urgency && (
