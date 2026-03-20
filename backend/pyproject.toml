@@ -1,0 +1,27 @@
+[project]
+name = "maven-mini"
+version = "0.1.0"
+description = "Maven Intelligence Mini — Women's Health Care Navigation Agent"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "anthropic>=0.40.0",
+    "chromadb>=0.5.0",
+    "pydantic>=2.0.0",
+    "aiosqlite>=0.20.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.27.0",
+    "scikit-learn>=1.5.0",
+    "joblib>=1.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

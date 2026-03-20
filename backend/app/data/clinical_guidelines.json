@@ -1,0 +1,92 @@
+[
+  {
+    "id": "acog-preeclampsia-001",
+    "source": "ACOG Practice Bulletin #222",
+    "topic": "Preeclampsia Screening & Management",
+    "content": "Preeclampsia is a pregnancy-specific hypertensive disorder that typically occurs after 20 weeks of gestation. It is characterized by new-onset hypertension (systolic blood pressure ≥140 mmHg or diastolic ≥90 mmHg) and proteinuria or other end-organ dysfunction. Risk factors include first pregnancy, maternal age >35, obesity (BMI >30), chronic hypertension, diabetes, kidney disease, and history of preeclampsia. Warning signs include severe headaches, visual changes (blurred vision, seeing spots), upper abdominal pain, sudden swelling of face/hands, and shortness of breath. Aspirin prophylaxis (81mg daily starting at 12-16 weeks) is recommended for high-risk individuals. Immediate medical evaluation is required if warning signs present."
+  },
+  {
+    "id": "acog-prenatal-002",
+    "source": "ACOG Committee Opinion #762",
+    "topic": "Prenatal Care Schedule",
+    "content": "Standard prenatal visit schedule: Every 4 weeks from weeks 4-28, every 2 weeks from weeks 28-36, then weekly from week 36 until delivery. First visit should include comprehensive history, physical exam, BMI calculation, blood type/Rh factor, CBC, urinalysis, STI screening, rubella immunity, hepatitis B, and dating ultrasound. Genetic screening options should be discussed at 10-13 weeks (first trimester screening) or 15-20 weeks (quad screen). Anatomy scan at 18-22 weeks. Glucose screening at 24-28 weeks. GBS screening at 36-37 weeks. Tdap vaccine recommended at 27-36 weeks each pregnancy."
+  },
+  {
+    "id": "acog-fertility-003",
+    "source": "ACOG Practice Bulletin #781",
+    "topic": "Fertility Evaluation",
+    "content": "Infertility is defined as the inability to conceive after 12 months of regular unprotected intercourse (6 months if woman is over 35). Initial evaluation should include: menstrual history assessment, ovulation testing (basal body temperature, ovulation predictor kits, or day 21 progesterone level), semen analysis for partner, hysterosalpingogram (HSG) to evaluate tubal patency, and thyroid function tests. AMH (anti-Müllerian hormone) and antral follicle count provide ovarian reserve assessment. Common causes include ovulatory disorders (25%), tubal factors (25%), male factors (30%), and unexplained (15%). Treatment options range from lifestyle modifications and ovulation induction to IUI and IVF depending on diagnosis."
+  },
+  {
+    "id": "who-antenatal-004",
+    "source": "WHO Recommendations on Antenatal Care (2016)",
+    "topic": "Antenatal Care Contact Schedule",
+    "content": "WHO recommends a minimum of 8 antenatal care contacts to reduce perinatal mortality and improve women's experience of care. First contact at up to 12 weeks, then at 20, 26, 30, 34, 36, 38, and 40 weeks. Each contact should include: blood pressure measurement, weight monitoring, urine testing for proteinuria and bacteriuria, blood testing for anemia, assessment of fetal movement and growth, and counseling on nutrition, physical activity, birth preparedness, and danger signs. Iron (30-60mg daily) and folic acid (400mcg daily) supplementation recommended throughout pregnancy."
+  },
+  {
+    "id": "who-nutrition-005",
+    "source": "WHO Guideline on Nutritional Interventions",
+    "topic": "Pregnancy Nutrition Guidelines",
+    "content": "Daily nutritional supplementation during pregnancy: Iron 30-60mg, Folic acid 400mcg (5mg if high-risk for neural tube defects), Calcium 1.5-2g in populations with low calcium intake. Balanced energy and protein supplementation recommended for undernourished populations. Caffeine intake should be limited to less than 300mg per day (approximately 2-3 cups of coffee). Vitamin A supplementation only in areas where deficiency is a public health problem. Zinc supplementation only as part of research. Healthy diet should include diverse foods: fruits, vegetables, whole grains, lean proteins, dairy. Weight gain targets vary by pre-pregnancy BMI: underweight 12.5-18kg, normal weight 11.5-16kg, overweight 7-11.5kg, obese 5-9kg."
+  },
+  {
+    "id": "who-postpartum-006",
+    "source": "WHO Recommendations on Postnatal Care (2022)",
+    "topic": "Postpartum Care Guidelines",
+    "content": "All women should receive postnatal care within 24 hours of birth, then at day 3, between days 7-14, and at 6 weeks postpartum. Assessments should include: uterine contraction and bleeding, temperature, blood pressure, perineal healing, breastfeeding assessment, emotional wellbeing screening (Edinburgh Postnatal Depression Scale), and newborn examination. Exclusive breastfeeding recommended for first 6 months. Contraception counseling should begin before discharge. Warning signs requiring immediate care: heavy bleeding (soaking >1 pad per hour), fever >38°C, severe headache with visual changes, calf pain/swelling, chest pain, or thoughts of self-harm. Pelvic floor exercises should begin within the first few days postpartum."
+  },
+  {
+    "id": "cdc-contraception-007",
+    "source": "CDC US Medical Eligibility Criteria (US MEC) 2024",
+    "topic": "Contraceptive Options Overview",
+    "content": "Contraceptive methods ranked by effectiveness (typical use failure rates): Implant (0.05%), Hormonal IUD (0.2%), Copper IUD (0.8%), Injectable (6%), Pill/Patch/Ring (9%), Condom (13%), Fertility awareness (12-24%), Withdrawal (20%). Long-acting reversible contraceptives (LARCs),IUDs and implants,are recommended as first-line options for most women due to highest effectiveness and ease of use. Contraindications vary by method: estrogen-containing methods (pill, patch, ring) are contraindicated with history of DVT/PE, migraine with aura, breast cancer, or age >35 with smoking. Progestin-only methods have fewer contraindications. IUDs can be placed immediately postpartum. Return to fertility is immediate for most methods except injectable (may delay up to 10 months)."
+  },
+  {
+    "id": "acog-menopause-008",
+    "source": "ACOG Practice Bulletin #141",
+    "topic": "Menopause Management",
+    "content": "Menopause is confirmed after 12 consecutive months without menstruation (average age 51). Perimenopause typically begins in mid-40s and can last 4-8 years. Common symptoms include vasomotor symptoms (hot flashes, night sweats affecting 75% of women), vaginal dryness, sleep disturbances, mood changes, and decreased bone density. Hormone replacement therapy (HRT) is the most effective treatment for vasomotor symptoms and should be considered for women within 10 years of menopause onset or under age 60 (the 'timing hypothesis'). HRT options include estrogen-only (for women without uterus) or combined estrogen-progestogen. Non-hormonal alternatives include SSRIs/SNRIs, gabapentin, and cognitive behavioral therapy. Regular bone density screening (DEXA) recommended starting at age 65, or earlier with risk factors."
+  },
+  {
+    "id": "who-breastfeeding-009",
+    "source": "WHO Infant and Young Child Feeding Guidelines",
+    "topic": "Breastfeeding Recommendations",
+    "content": "Initiate breastfeeding within one hour of birth. Exclusive breastfeeding recommended for the first 6 months of life,no other foods or liquids, including water. Continue breastfeeding along with appropriate complementary foods up to 2 years or beyond. Breastfeed on demand,as often as the infant wants, day and night (typically 8-12 times per 24 hours for newborns). Avoid use of bottles, teats, or pacifiers in the first weeks. Common challenges include: latching difficulties (evaluate tongue-tie), perceived insufficient supply (most common reason for early cessation, usually resolved with more frequent feeding), mastitis (continue breastfeeding, antibiotics if needed), and engorgement (frequent feeding, cold compresses). Support from lactation consultants significantly improves breastfeeding outcomes."
+  },
+  {
+    "id": "cdc-prenatal-screening-010",
+    "source": "CDC Prenatal Screening Guidelines",
+    "topic": "Prenatal Genetic Screening",
+    "content": "All pregnant women should be offered genetic screening regardless of age. Options include: First trimester (10-13 weeks): Nuchal translucency ultrasound + maternal blood markers (PAPP-A, free beta-hCG) for Down syndrome, trisomy 18, and trisomy 13. Detection rate approximately 82-87%. Cell-free DNA (cfDNA/NIPT) screening: Available from 10 weeks, detection rate >99% for Down syndrome. Recommended as first-line for high-risk pregnancies. Second trimester (15-20 weeks): Quad screen (AFP, hCG, estriol, inhibin A). Diagnostic testing: Chorionic villus sampling (CVS) at 10-13 weeks or amniocentesis at 15-20 weeks for definitive diagnosis. Genetic counseling should be offered before and after screening to help patients understand results and options."
+  },
+  {
+    "id": "acog-gbs-011",
+    "source": "ACOG Committee Opinion #797",
+    "topic": "Group B Streptococcus (GBS) Prevention",
+    "content": "Universal GBS screening recommended for all pregnant women at 36-37 weeks of gestation via vaginal-rectal swab culture. GBS colonization is found in approximately 25% of women. Intrapartum antibiotic prophylaxis (penicillin G preferred, alternatives for penicillin allergy) should be administered to all GBS-positive women during labor, ideally at least 4 hours before delivery. Women with GBS bacteriuria during current pregnancy or a previous infant with GBS disease should receive prophylaxis regardless of screening results. Adequate prophylaxis significantly reduces early-onset GBS disease in newborns from 1.7 to 0.23 per 1,000 live births."
+  },
+  {
+    "id": "who-maternal-mental-012",
+    "source": "WHO Maternal Mental Health Guidelines",
+    "topic": "Perinatal Mental Health",
+    "content": "Perinatal depression affects approximately 10-15% of women globally. Screening should occur at least once during pregnancy and postpartum using validated tools such as the Edinburgh Postnatal Depression Scale (EPDS, cutoff ≥13) or PHQ-9 (cutoff ≥10). Risk factors include: history of depression/anxiety, lack of social support, unplanned pregnancy, intimate partner violence, pregnancy complications, and prior pregnancy loss. Treatment options: For mild-moderate depression, psychological interventions (CBT, interpersonal therapy) are first-line. For moderate-severe depression, SSRIs may be considered (sertraline and paroxetine have most safety data in pregnancy/breastfeeding). Postpartum psychosis (1-2 per 1,000 births) is a psychiatric emergency requiring immediate hospitalization. All women should be asked about emotional wellbeing at every perinatal contact."
+  },
+  {
+    "id": "acog-exercise-013",
+    "source": "ACOG Committee Opinion #804",
+    "topic": "Physical Activity During Pregnancy",
+    "content": "Physical activity during pregnancy is safe and beneficial for most women. Recommendation: At least 150 minutes of moderate-intensity aerobic activity per week. Benefits include reduced risk of gestational diabetes, preeclampsia, cesarean delivery, excessive weight gain, and improved mental health. Safe activities include walking, swimming, stationary cycling, low-impact aerobics, yoga (modified), and strength training (moderate). Activities to avoid: contact sports, activities with fall risk, hot yoga/hot pilates, scuba diving, exercising at high altitude (>6,000 ft) if not acclimated. Warning signs to stop exercise: vaginal bleeding, dizziness, headache, chest pain, calf pain/swelling, regular contractions, fluid leakage. Contraindications to exercise include: placenta previa after 26 weeks, preeclampsia, cervical insufficiency, and preterm labor."
+  },
+  {
+    "id": "cdc-vaccination-014",
+    "source": "CDC Immunization Schedule for Pregnancy",
+    "topic": "Vaccinations During Pregnancy",
+    "content": "Recommended during pregnancy: Tdap (whooping cough) at 27-36 weeks of each pregnancy, even if previously vaccinated. Influenza vaccine (inactivated) during flu season at any trimester. COVID-19 vaccine is recommended for pregnant individuals. RSV vaccine (Abrysvo) may be given at 32-36 weeks gestation during September-January to provide passive immunity to newborn. Safe during pregnancy if indicated: Hepatitis B, meningococcal. Contraindicated during pregnancy: Live vaccines including MMR, varicella, live influenza (FluMist), and HPV. If rubella non-immunity is discovered during pregnancy, MMR should be administered postpartum before discharge. All household contacts should be up-to-date on vaccinations to create a 'cocoon' of protection for the newborn."
+  },
+  {
+    "id": "acog-gestational-diabetes-015",
+    "source": "ACOG Practice Bulletin #190",
+    "topic": "Gestational Diabetes Mellitus",
+    "content": "Screen all pregnant women for gestational diabetes at 24-28 weeks. Early screening at first prenatal visit for women with risk factors: BMI >25, history of GDM, family history of type 2 diabetes, polycystic ovary syndrome, or high-risk ethnicity. Two approaches: One-step (75g OGTT, fasting ≥92, 1hr ≥180, 2hr ≥153 mg/dL) or Two-step (50g glucose challenge test, if ≥130-140 followed by 100g OGTT). Management: Medical nutrition therapy and physical activity are first-line. Self-monitoring of blood glucose 4 times daily. Insulin is preferred pharmacologic therapy when lifestyle modifications are insufficient (fasting glucose >95 or 2hr postprandial >120 mg/dL). Metformin may be considered as alternative. Increased surveillance in third trimester. Screen for type 2 diabetes at 4-12 weeks postpartum. Women with GDM have 50% risk of developing type 2 diabetes within 10 years."
+  }
+]
