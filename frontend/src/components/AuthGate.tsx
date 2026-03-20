@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ShieldIcon, SearchIcon, BrainIcon, ChartIcon } from "@/components/Icons";
+import { ShieldIcon, SearchIcon, BrainIcon, ChartIcon, AlertIcon } from "@/components/Icons";
 
 const VALID_CODES = ["edgetech-2026"];
 
@@ -71,9 +71,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             {[
               { icon: <ShieldIcon size={20} />, label: "Input Rails", sub: "3 safety checks", color: "border-status-blocked/20 text-status-blocked", floatClass: "float-slow" },
               { icon: <SearchIcon size={20} />, label: "RAG Retrieval", sub: "137 clinical docs", color: "border-teal-500/20 text-teal-400", floatClass: "float-medium" },
-              { icon: <BrainIcon size={20} />, label: "Claude + Think", sub: "Reasoning visible", color: "border-maven-400/20 text-maven-400", floatClass: "float-slow" },
-              { icon: <ShieldIcon size={20} />, label: "Output Rails", sub: "Med + Dx safety", color: "border-status-caution/20 text-status-caution", floatClass: "float-medium" },
-              { icon: <ChartIcon size={20} />, label: "Eval Judge", sub: "Live scoring", color: "border-status-safe/20 text-status-safe", floatClass: "float-slow" },
+              { icon: <AlertIcon size={20} />, label: "ML Urgency", sub: "TF-IDF + GBM", color: "border-status-caution/20 text-status-caution", floatClass: "float-slow" },
+              { icon: <BrainIcon size={20} />, label: "Claude + Think", sub: "Reasoning visible", color: "border-maven-400/20 text-maven-400", floatClass: "float-medium" },
+              { icon: <ShieldIcon size={20} />, label: "Output Rails", sub: "Med + Dx safety", color: "border-status-blocked/20 text-status-blocked", floatClass: "float-slow" },
+              { icon: <ChartIcon size={20} />, label: "Eval Judge", sub: "Auto-evolve", color: "border-status-safe/20 text-status-safe", floatClass: "float-medium" },
             ].map((step, i) => (
               <div key={step.label} className="flex items-start gap-2">
                 <div className={`flex flex-col items-center text-center w-[4.5rem] ${step.floatClass}`}>
@@ -87,7 +88,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                     {step.sub}
                   </span>
                 </div>
-                {i < 4 && (
+                {i < 5 && (
                   <div className="flex items-center mt-4">
                     <div className="w-3 h-px bg-border-default" />
                     <div className="w-0 h-0 border-t-[2.5px] border-t-transparent border-b-[2.5px] border-b-transparent border-l-[4px] border-l-border-default" />
