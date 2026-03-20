@@ -6,6 +6,10 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 COPY . .
+
+# Backend URL baked at build time for Next.js client bundle
+ENV NEXT_PUBLIC_API_URL=https://backend-production-f3b8.up.railway.app
+
 RUN npm run build
 
 # Production
