@@ -76,14 +76,21 @@ export function MemoryPanel({
         fetch(`${API_BASE}/api/memory/stats`),
       ]);
       if (sessRes.ok) setSessions(await sessRes.json());
-      if (statsRes.ok) setStats(await statsRes.json());
+      if (statsRes.ok) {
+        const s = await statsRes.json();
+        setStats(s);
+        // If we have stats but no live data, show overview instead of empty live view
+        if (s.total_sessions > 0 && liveData.messages.length === 0) {
+          setView("overview");
+        }
+      }
     } catch { /* ignore */ }
     setLoading(false);
-  }, []);
+  }, [liveData.messages.length]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  // Refresh stats when messages change
-  useEffect(() => { if (liveData.messages.length > 0) fetchData(); }, [liveData.messages.length, fetchData]);
+  // Refresh when messages arrive
+  useEffect(() => { if (liveData.messages.length > 0) { setView("live"); fetchData(); } }, [liveData.messages.length, fetchData]);
 
   const viewSession = async (id: string) => {
     setLoading(true);
@@ -225,7 +232,7 @@ export function MemoryPanel({
   // ── Live session view (default) ──
   const userMsgs = liveData.messages.filter(m => m.role === "user");
   const assistantMsgs = liveData.messages.filter(m => m.role === "assistant" && m.content);
-  const hasData = liveData.messages.length > 0;
+  const hasData = liveData.messages.length > 0 || (stats !== null && stats.total_sessions > 0);
 
   return (
     <div className="space-y-4">
