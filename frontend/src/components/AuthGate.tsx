@@ -74,7 +74,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
               { icon: <AlertIcon size={20} />, label: "ML Urgency", sub: "TF-IDF + GBM", color: "border-status-caution/20 text-status-caution", floatClass: "float-slow" },
               { icon: <BrainIcon size={20} />, label: "Claude + Think", sub: "Reasoning visible", color: "border-maven-400/20 text-maven-400", floatClass: "float-medium" },
               { icon: <ShieldIcon size={20} />, label: "Output Rails", sub: "Med + Dx safety", color: "border-status-blocked/20 text-status-blocked", floatClass: "float-slow" },
-              { icon: <ChartIcon size={20} />, label: "Eval Judge", sub: "Auto-evolve", color: "border-status-safe/20 text-status-safe", floatClass: "float-medium" },
+              { icon: <ChartIcon size={20} />, label: "Eval + Evolve", sub: "Pass/fail + auto-fix", color: "border-status-safe/20 text-status-safe", floatClass: "float-medium" },
             ].map((step, i) => (
               <div key={step.label} className="flex items-start gap-2">
                 <div className={`flex flex-col items-center text-center w-[4.5rem] ${step.floatClass}`}>
@@ -189,12 +189,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                 </p>
                 <p className="text-[11px] text-text-secondary leading-relaxed">
                   This demo is the answer. Bloom Care AI is a full-stack care
-                  navigation system with a 10-step autonomous agent that orchestrates
-                  7 different models: RAG over 137 clinical docs, an sklearn urgency
-                  classifier, Claude Sonnet with extended thinking, Haiku for routing
-                  and eval, 5-layer clinical guardrails, a provider recommendation
-                  engine, semantic search, and an auto-evolve loop that iteratively
-                  optimizes prompts to hit faithfulness targets.
+                  navigation system with a 10-step autonomous agent orchestrating
+                  7 models. Every response gets binary pass/fail eval on faithfulness,
+                  relevance, and safety. When faithfulness fails, a one-click
+                  &quot;Improve response&quot; button re-generates with stricter grounding.
+                  The Prompt Playground takes this further with an autonomous
+                  auto-evolve loop (inspired by Karpathy&apos;s autoresearch) that
+                  iterates through strategies, keeps improvements, discards
+                  regressions, and tests across multiple questions until all
+                  faithfulness checks pass.
                 </p>
               </div>
 
@@ -203,13 +206,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                   Describe your experience building with LLMs in production?
                 </p>
                 <p className="text-[11px] text-text-secondary leading-relaxed">
-                  At Exmplr, I built a clinical trial matching system that processes
+                  At Exmplr, I built a clinical trial matching system processing
                   562K trials with 19.8M RAG vectors using multi-agent orchestration
-                  at scale. This demo shows the same patterns: multi-model orchestration
+                  at scale. This demo applies those patterns: multi-model orchestration
                   (Sonnet for generation, Haiku for routing and eval, sklearn for
                   classification, ChromaDB for retrieval), guardrails as a separate
-                  validation layer, episodic memory extraction, and automated eval
-                  with LLM-as-judge. Every component is production-patterned.
+                  validation layer, episodic memory extraction, and binary pass/fail
+                  evals following best practices from Hamel Husain and Arize AI
+                  research. The eval loop is the key differentiator: it
+                  doesn&apos;t just score, it autonomously improves.
                 </p>
               </div>
             </div>
@@ -221,7 +226,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
               Try These Scenarios
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {["Agent Assessment", "Semantic Search", "Guardrails", "RAG + Citations", "Provider Matching", "Auto-Evolve", "Memory"].map((s) => (
+              {["Agent Assessment", "Semantic Search", "Guardrails", "RAG + Citations", "Provider Matching", "Inline Eval + Improve", "Auto-Evolve Loop", "Memory"].map((s) => (
                 <span key={s} className="text-[10px] px-2.5 py-1 rounded-full border border-border-default text-text-muted">
                   {s}
                 </span>
