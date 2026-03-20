@@ -206,41 +206,26 @@ export function MetricsPanel({ data }: { data: MetricsData }) {
         </div>
       )}
 
-      {/* Eval trend */}
+      {/* Eval trend (pass/fail) */}
       {data.evalHistory.length > 0 && (
         <div>
           <h3 className="text-[9px] font-semibold text-text-muted uppercase tracking-wider mb-2">
-            Eval Score Trend
+            Eval Results
           </h3>
-          <div className="flex items-end gap-1 h-16">
-            {data.evalHistory.map((eval_score, i) => {
-              const fH = Math.max(4, eval_score.faithfulness * 100);
-              const rH = Math.max(4, eval_score.relevance * 100);
-              return (
-                <div key={i} className="flex-1 flex gap-px items-end" title={`Message ${i + 1}`}>
-                  <div
-                    className={`flex-1 rounded-t ${
-                      eval_score.faithfulness >= 0.7 ? "bg-status-safe/60" : eval_score.faithfulness >= 0.4 ? "bg-status-caution/60" : "bg-status-blocked/60"
-                    }`}
-                    style={{ height: `${fH}%` }}
-                  />
-                  <div
-                    className="flex-1 rounded-t bg-teal-400/50"
-                    style={{ height: `${rH}%` }}
-                  />
-                </div>
-              );
-            })}
+          <div className="space-y-1">
+            {data.evalHistory.map((ev, i) => (
+              <div key={i} className="flex items-center gap-2 text-[9px]">
+                <span className="text-text-muted font-mono w-4">#{i + 1}</span>
+                <EvalDot result={ev.faithfulness} label="F" />
+                <EvalDot result={ev.relevance} label="R" />
+                <EvalDot result={ev.safety} label="S" />
+              </div>
+            ))}
           </div>
-          <div className="flex gap-3 text-[8px] text-text-muted mt-1">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-status-caution/60" />
-              Faithfulness
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400/50" />
-              Relevance
-            </span>
+          <div className="flex gap-3 text-[8px] text-text-muted mt-2">
+            <span>F = Faithfulness</span>
+            <span>R = Relevance</span>
+            <span>S = Safety</span>
           </div>
         </div>
       )}
@@ -252,6 +237,17 @@ export function MetricsPanel({ data }: { data: MetricsData }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function EvalDot({ result, label }: { result: string; label: string }) {
+  const isPass = result === "pass";
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-medium ${
+      isPass ? "bg-status-safe/15 text-status-safe" : result === "fail" ? "bg-status-blocked/15 text-status-blocked" : "bg-surface-overlay text-text-muted"
+    }`}>
+      {label}: {isPass ? "PASS" : result === "fail" ? "FAIL" : "?"}
+    </span>
   );
 }
 

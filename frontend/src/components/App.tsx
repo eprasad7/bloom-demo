@@ -243,7 +243,7 @@ export default function App() {
           onJourney: (entries) => setJourney(entries),
           onEval: (scores) => {
             setEvalScores(scores);
-            if (scores.faithfulness >= 0) setEvalHistory((prev) => [...prev, scores]);
+            if (scores.faithfulness !== "error") setEvalHistory((prev) => [...prev, scores]);
           },
           onAudit: (events) => {
             setAuditEvents(events);

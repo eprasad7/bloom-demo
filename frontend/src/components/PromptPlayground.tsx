@@ -9,8 +9,8 @@ interface EvalRun {
   id: number;
   timestamp: string;
   question: string;
-  faithfulness: number;
-  relevance: number;
+  faithfulness: string;
+  relevance: string;
   reasoning: string;
 }
 
@@ -45,8 +45,8 @@ export function PromptPlayground({
   const [evolveIterations, setEvolveIterations] = useState<Array<{
     iteration: number;
     strategy: string;
-    avg_faithfulness: number;
-    avg_relevance: number;
+    faithfulness_pass_rate: string;
+    relevance_pass_rate: string;
     status: string;
   }>>([]);
   const [evolveStatus, setEvolveStatus] = useState<string>("");
@@ -95,9 +95,9 @@ export function PromptPlayground({
         id: runCount + 1,
         timestamp: new Date().toLocaleTimeString(),
         question: testQuestion.slice(0, 60) + (testQuestion.length > 60 ? "..." : ""),
-        faithfulness: data.eval_scores?.faithfulness ?? -1,
-        relevance: data.eval_scores?.relevance ?? -1,
-        reasoning: data.eval_scores?.reasoning ?? "",
+        faithfulness: data.eval_scores?.faithfulness ?? "error",
+        relevance: data.eval_scores?.relevance ?? "error",
+        reasoning: data.eval_scores?.faithfulness_reason ?? "",
       };
       setHistory((prev) => [newRun, ...prev]);
       setRunCount((c) => c + 1);
@@ -174,17 +174,17 @@ export function PromptPlayground({
                 setEvolveIterations((prev) => [...prev, {
                   iteration: data.iteration,
                   strategy: data.strategy,
-                  avg_faithfulness: data.avg_faithfulness,
-                  avg_relevance: data.avg_relevance,
+                  faithfulness_pass_rate: data.faithfulness_pass_rate || "0/0",
+                  relevance_pass_rate: data.relevance_pass_rate || "0/0",
                   status: data.status,
                 }]);
                 const newRun: EvalRun = {
                   id: runCount + data.iteration,
                   timestamp: new Date().toLocaleTimeString(),
                   question: `[Auto #${data.iteration}] ${data.status}`,
-                  faithfulness: data.avg_faithfulness,
-                  relevance: data.avg_relevance,
-                  reasoning: data.question_scores?.[0]?.reasoning ?? "",
+                  faithfulness: data.faithfulness_pass_rate || "?",
+                  relevance: data.relevance_pass_rate || "?",
+                  reasoning: data.question_scores?.[0]?.faithfulness_reason ?? "",
                 };
                 setHistory((prev) => [newRun, ...prev]);
               } else if (currentEvent === "prompt_rewritten") {
@@ -345,23 +345,19 @@ export function PromptPlayground({
                     )}
 
                     {/* Eval scores */}
-                    {evalResult && evalResult.faithfulness >= 0 && (
+                    {evalResult && evalResult.faithfulness !== "error" && (
                       <div className="mt-4 bg-surface-primary border border-border-subtle rounded-xl p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <ChartIcon size={14} className="text-text-muted" />
                           <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
-                            Eval Results
+                            Eval Results (Binary)
                           </span>
                         </div>
-                        <div className="flex gap-3 mb-3">
-                          <ScoreChip label="Faithfulness" score={evalResult.faithfulness} />
-                          <ScoreChip label="Relevance" score={evalResult.relevance} />
+                        <div className="space-y-2 mb-3">
+                          <PassFailRow label="Faithfulness" result={evalResult.faithfulness} reason={evalResult.faithfulness_reason} />
+                          <PassFailRow label="Relevance" result={evalResult.relevance} reason={evalResult.relevance_reason} />
+                          <PassFailRow label="Safety" result={evalResult.safety} reason={evalResult.safety_reason} />
                         </div>
-                        {evalResult.reasoning && (
-                          <p className="text-[11px] text-text-secondary leading-relaxed italic">
-                            {evalResult.reasoning}
-                          </p>
-                        )}
 
                         {/* Auto-evolve button */}
                         <button
@@ -403,20 +399,15 @@ export function PromptPlayground({
                                 <div key={iter.iteration} className="message-enter">
                                   <div className="flex items-center gap-2">
                                     <span className="text-[9px] font-mono text-text-muted w-4">#{iter.iteration}</span>
-                                    <div className="flex-1 h-1.5 bg-surface-primary rounded-full overflow-hidden">
-                                      <div
-                                        className={`h-full rounded-full transition-all duration-500 ${
-                                          iter.avg_faithfulness >= 0.75
-                                            ? "bg-status-safe"
-                                            : iter.avg_faithfulness >= 0.5
-                                              ? "bg-status-caution"
-                                              : "bg-status-blocked"
-                                        }`}
-                                        style={{ width: `${iter.avg_faithfulness * 100}%` }}
-                                      />
-                                    </div>
-                                    <span className="text-[9px] font-mono text-text-secondary w-8 text-right">
-                                      {Math.round(iter.avg_faithfulness * 100)}%
+                                    <span className={`text-[9px] font-mono font-medium px-1.5 py-0.5 rounded ${
+                                      iter.faithfulness_pass_rate.startsWith(iter.faithfulness_pass_rate.split("/")[1])
+                                        ? "bg-status-safe/15 text-status-safe"
+                                        : "bg-status-caution/15 text-status-caution"
+                                    }`}>
+                                      F: {iter.faithfulness_pass_rate}
+                                    </span>
+                                    <span className="text-[9px] font-mono text-text-muted">
+                                      R: {iter.relevance_pass_rate}
                                     </span>
                                     <span className={`text-[8px] px-1.5 py-0.5 rounded font-medium ${
                                       iter.status === "keep" ? "bg-status-safe/15 text-status-safe"
@@ -514,8 +505,8 @@ export function PromptPlayground({
                       </span>
                     </div>
                     <div className="flex gap-2 mb-2">
-                      <MiniScore label="F" score={run.faithfulness} />
-                      <MiniScore label="R" score={run.relevance} />
+                      <MiniPassFail label="F" result={run.faithfulness} />
+                      <MiniPassFail label="R" result={run.relevance} />
                     </div>
                     <p className="text-[9px] text-text-muted truncate">
                       {run.question}
@@ -536,33 +527,30 @@ export function PromptPlayground({
   );
 }
 
-function ScoreChip({ label, score }: { label: string; score: number }) {
-  const pct = Math.round(score * 100);
-  const color = score >= 0.7
-    ? "text-status-safe border-status-safe/30 bg-status-safe/10"
-    : score >= 0.4
-      ? "text-status-caution border-status-caution/30 bg-status-caution/10"
-      : "text-status-blocked border-status-blocked/30 bg-status-blocked/10";
-
+function PassFailRow({ label, result, reason }: { label: string; result: string; reason: string }) {
+  const isPass = result === "pass";
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${color}`}>
-      <span className="text-[11px] font-medium">{label}</span>
-      <span className="text-[11px] font-mono font-bold">{pct}%</span>
+    <div className="flex items-start gap-2">
+      <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded ${
+        isPass ? "bg-status-safe/15 text-status-safe" : "bg-status-blocked/15 text-status-blocked"
+      }`}>
+        {isPass ? "PASS" : "FAIL"}
+      </span>
+      <div className="min-w-0">
+        <span className="text-[10px] text-text-primary font-medium">{label}</span>
+        {reason && <p className="text-[9px] text-text-muted leading-snug">{reason}</p>}
+      </div>
     </div>
   );
 }
 
-function MiniScore({ label, score }: { label: string; score: number }) {
-  const pct = Math.round(score * 100);
-  const color = score >= 0.7
-    ? "text-status-safe bg-status-safe/15"
-    : score >= 0.4
-      ? "text-status-caution bg-status-caution/15"
-      : "text-status-blocked bg-status-blocked/15";
-
+function MiniPassFail({ label, result }: { label: string; result: string }) {
+  const isPass = result === "pass";
   return (
-    <span className={`text-[9px] font-mono font-medium px-1.5 py-0.5 rounded ${color}`}>
-      {label}: {pct}%
+    <span className={`text-[9px] font-mono font-medium px-1.5 py-0.5 rounded ${
+      isPass ? "bg-status-safe/15 text-status-safe" : result === "fail" ? "bg-status-blocked/15 text-status-blocked" : "bg-surface-overlay text-text-muted"
+    }`}>
+      {label}: {isPass ? "PASS" : result === "fail" ? "FAIL" : "?"}
     </span>
   );
 }

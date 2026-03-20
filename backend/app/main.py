@@ -273,29 +273,33 @@ async def auto_evolve(
                     "relevance": eval_scores["relevance"],
                 })
 
-            # Average scores across all questions
-            avg_faith = sum(q["faithfulness"] for q in question_scores) / len(question_scores)
-            avg_rel = sum(q["relevance"] for q in question_scores) / len(question_scores)
+            # Count pass/fail across all questions
+            faith_passes = sum(1 for q in question_scores if q["faithfulness"] == "pass")
+            rel_passes = sum(1 for q in question_scores if q["relevance"] == "pass")
+            safety_passes = sum(1 for q in question_scores if q.get("safety") == "pass")
+            total_q = len(question_scores)
+            pass_rate = faith_passes / total_q if total_q > 0 else 0
 
             # Keep or discard (autoresearch pattern)
             status = "baseline"
             if i > 0:
-                if avg_faith > best_score:
+                if pass_rate > best_score:
                     status = "keep"
-                    best_score = avg_faith
+                    best_score = pass_rate
                     best_prompt = current_prompt
                 else:
                     status = "discard"
                     current_prompt = best_prompt  # rollback
             else:
-                best_score = avg_faith
+                best_score = pass_rate
                 best_prompt = current_prompt
 
             iteration_result = {
                 "iteration": i + 1,
                 "strategy": strategy_used,
-                "avg_faithfulness": round(avg_faith, 3),
-                "avg_relevance": round(avg_rel, 3),
+                "faithfulness_pass_rate": f"{faith_passes}/{total_q}",
+                "relevance_pass_rate": f"{rel_passes}/{total_q}",
+                "safety_pass_rate": f"{safety_passes}/{total_q}",
                 "status": status,
                 "question_scores": question_scores,
                 "prompt_length": len(current_prompt),
@@ -304,11 +308,11 @@ async def auto_evolve(
 
             yield sse("iteration_complete", iteration_result)
 
-            # Check if target met
-            if avg_faith >= request.target_faithfulness:
+            # Check if all faithfulness checks pass
+            if faith_passes == total_q:
                 yield sse("target_met", {
                     "iteration": i + 1,
-                    "final_faithfulness": round(avg_faith, 3),
+                    "pass_rate": f"{faith_passes}/{total_q}",
                 })
                 break
 
@@ -321,10 +325,10 @@ async def auto_evolve(
                     max_tokens=2048,
                     messages=[{
                         "role": "user",
-                        "content": f"""You are an autonomous prompt optimization agent. Your goal is to maximize faithfulness (currently {avg_faith:.0%}, target {request.target_faithfulness:.0%}).
+                        "content": f"""You are an autonomous prompt optimization agent. Your goal is to get all faithfulness checks to PASS (currently {faith_passes}/{total_q} passing).
 
 Eval feedback from {len(question_scores)} test questions:
-{chr(10).join(f"- Q: {q['question']} | F: {q['faithfulness']:.0%} | {q['reasoning']}" for q in question_scores)}
+{chr(10).join(f"- Q: {q['question']} | Faithfulness: {q['faithfulness'].upper()} | {q['faithfulness_reason']}" for q in question_scores)}
 
 Strategy to apply: {next_strategy}
 
@@ -346,8 +350,8 @@ Apply the strategy above to the system prompt. Return ONLY the complete rewritte
 
         yield sse("complete", {
             "total_iterations": len(iterations),
-            "best_faithfulness": round(best_score, 3),
-            "target_met": best_score >= request.target_faithfulness,
+            "best_pass_rate": round(best_score, 3),
+            "target_met": best_score >= 1.0,
             "final_prompt": best_prompt,
             "iterations": iterations,
         })
@@ -369,13 +373,14 @@ async def run_eval(x_api_key: str | None = Header(None)) -> dict:
     results = await run_batch_eval(client, process_message)
 
     # Compute summary stats
-    valid = [r for r in results if r.get("faithfulness", -1) >= 0]
+    valid = [r for r in results if r.get("faithfulness") in ("pass", "fail")]
     return {
         "total_cases": len(EVAL_TEST_CASES),
         "completed": len(valid),
         "retrieval_hit_rate": sum(1 for r in results if r.get("retrieval_hit")) / len(results) if results else 0,
-        "avg_faithfulness": sum(r["faithfulness"] for r in valid) / len(valid) if valid else 0,
-        "avg_relevance": sum(r["relevance"] for r in valid) / len(valid) if valid else 0,
+        "faithfulness_pass_rate": sum(1 for r in valid if r.get("faithfulness") == "pass") / len(valid) if valid else 0,
+        "relevance_pass_rate": sum(1 for r in valid if r.get("relevance") == "pass") / len(valid) if valid else 0,
+        "safety_pass_rate": sum(1 for r in valid if r.get("safety") == "pass") / len(valid) if valid else 0,
         "results": results,
     }
 

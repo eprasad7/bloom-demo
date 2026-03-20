@@ -1,29 +1,30 @@
 "use client";
 
 import type { EvalScores, RAGContext, RetrievedGuideline } from "@/lib/types";
-import { SearchIcon } from "@/components/Icons";
+import { SearchIcon, CheckIcon, XIcon } from "@/components/Icons";
 
-function ScoreBar({ score, label }: { score: number; label: string }) {
-  const pct = Math.round(score * 100);
-  const color =
-    score >= 0.7
-      ? "bg-status-safe"
-      : score >= 0.4
-        ? "bg-status-caution"
-        : "bg-status-blocked";
-
+function PassFailBadge({ result, label, reason }: { result: string; label: string; reason: string }) {
+  const isPass = result === "pass";
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] text-text-muted w-14 shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-surface-primary rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
-          style={{ width: `${pct}%` }}
-        />
+    <div className={`flex items-start gap-2 p-2 rounded-lg border ${
+      isPass ? "border-status-safe/20 bg-status-safe/5" : "border-status-blocked/20 bg-status-blocked/5"
+    }`}>
+      <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
+        isPass ? "bg-status-safe/20 text-status-safe" : "bg-status-blocked/20 text-status-blocked"
+      }`}>
+        {isPass ? <CheckIcon size={10} /> : <XIcon size={10} />}
       </div>
-      <span className="text-[10px] font-mono text-text-secondary w-8 text-right">
-        {pct}%
-      </span>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold text-text-primary">{label}</span>
+          <span className={`text-[9px] font-bold uppercase ${isPass ? "text-status-safe" : "text-status-blocked"}`}>
+            {result}
+          </span>
+        </div>
+        {reason && (
+          <p className="text-[9px] text-text-muted leading-snug mt-0.5">{reason}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -39,20 +40,16 @@ export function RAGVisualizer({
 }) {
   return (
     <div className="space-y-5">
-      {/* ── Eval Scores ── */}
-      {evalScores && evalScores.faithfulness >= 0 && (
+      {/* ── Eval Results (Pass/Fail) ── */}
+      {evalScores && evalScores.faithfulness !== "error" && (
         <div className="message-enter">
           <h3 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-2">
-            Eval Scores
+            Eval Results (Binary)
           </h3>
-          <div className="bg-surface-elevated border border-border-subtle rounded-lg p-3 space-y-2">
-            <ScoreBar score={evalScores.faithfulness} label="Faithful" />
-            <ScoreBar score={evalScores.relevance} label="Relevant" />
-            {evalScores.reasoning && (
-              <p className="text-[10px] text-text-muted mt-1 leading-snug italic">
-                {evalScores.reasoning}
-              </p>
-            )}
+          <div className="space-y-1.5">
+            <PassFailBadge result={evalScores.faithfulness} label="Faithfulness" reason={evalScores.faithfulness_reason} />
+            <PassFailBadge result={evalScores.relevance} label="Relevance" reason={evalScores.relevance_reason} />
+            <PassFailBadge result={evalScores.safety} label="Safety" reason={evalScores.safety_reason} />
           </div>
         </div>
       )}

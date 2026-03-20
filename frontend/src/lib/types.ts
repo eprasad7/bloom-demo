@@ -52,9 +52,12 @@ export interface AuditEvent {
 }
 
 export interface EvalScores {
-  faithfulness: number;
-  relevance: number;
-  reasoning: string;
+  faithfulness: string; // "pass" | "fail" | "error"
+  faithfulness_reason: string;
+  relevance: string;
+  relevance_reason: string;
+  safety: string;
+  safety_reason: string;
 }
 
 export interface RAGContext {
