@@ -5,6 +5,7 @@ import type {
   GuardrailResult,
   PatientContext,
   PatientMemory,
+  ProviderRecommendation,
   UrgencyPrediction,
   ICD10Code,
   JourneyEntry,
@@ -17,6 +18,7 @@ export interface StreamCallbacks {
   onInputRails: (result: GuardrailResult) => void;
   onICD10: (codes: ICD10Code[]) => void;
   onMemory: (newMemories: PatientMemory[], context: PatientContext) => void;
+  onRecommendations: (providers: ProviderRecommendation[]) => void;
   onUrgency: (prediction: UrgencyPrediction) => void;
   onRAG: (guidelines: RetrievedGuideline[]) => void;
   onRAGContext: (context: RAGContext) => void;
@@ -117,6 +119,9 @@ function dispatchEvent(
       break;
     case "icd10":
       cb.onICD10(data.codes as ICD10Code[]);
+      break;
+    case "recommendations":
+      cb.onRecommendations(data.providers as ProviderRecommendation[]);
       break;
     case "memory":
       cb.onMemory(

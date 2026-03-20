@@ -16,6 +16,7 @@ from app.models import (
 from app.ml.urgency_classifier import predict_urgency
 from app.services.audit import AuditLogger
 from app.services.memory import PatientContext
+from app.services.recommendations import recommend_providers
 from app.services.eval import evaluate_response
 from app.services.guardrails import run_input_rails, run_output_rails
 from app.services.icd10 import lookup_icd10_codes
@@ -251,6 +252,35 @@ async def process_message_stream(
             "new_memories": new_memories,
             "patient_context": patient_ctx.to_summary(),
         })
+
+        # ── Provider Recommendations ──
+        audit.start_timer("recommendations")
+        ctx_summary = patient_ctx.to_summary()
+        # Infer pathway from context for routing
+        inferred_pathway = ""
+        pregnancy_vals = " ".join(ctx_summary["pregnancy"].values()).lower()
+        care_vals = " ".join(ctx_summary["care_context"].values()).lower()
+        if pregnancy_vals:
+            inferred_pathway = "maternity"
+        elif "postpartum" in care_vals:
+            inferred_pathway = "postpartum"
+        elif "menopause" in care_vals:
+            inferred_pathway = "menopause"
+        elif any("infertil" in c.lower() or "conceive" in c.lower() for c in ctx_summary["conditions"] + list(ctx_summary["care_context"].values())):
+            inferred_pathway = "fertility"
+
+        recommendations = recommend_providers(
+            symptoms=ctx_summary["symptoms"],
+            conditions=ctx_summary["conditions"],
+            care_pathway=inferred_pathway,
+            gestational_age=next(iter(ctx_summary["pregnancy"].values()), None),
+        )
+        audit.log(
+            "recommendations",
+            f"Recommended {len(recommendations)} providers",
+            timer_key="recommendations",
+        )
+        yield sse("recommendations", {"providers": recommendations})
 
         # ── ML Urgency Classification ──
         audit.start_timer("urgency_ml")

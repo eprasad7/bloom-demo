@@ -83,6 +83,14 @@ export interface PatientContext {
   total_facts: number;
 }
 
+export interface ProviderRecommendation {
+  title: string;
+  specialty: string;
+  reason: string;
+  urgency: string;
+  score: number;
+}
+
 export interface UrgencyPrediction {
   urgency_level: number;
   urgency_label: string;

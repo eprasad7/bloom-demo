@@ -11,6 +11,7 @@ import { PromptPlayground } from "@/components/PromptPlayground";
 import { MemoryPanel } from "@/components/MemoryPanel";
 import { MetricsPanel } from "@/components/MetricsPanel";
 import { RAGVisualizer } from "@/components/RAGVisualizer";
+import { RecommendationPanel } from "@/components/RecommendationPanel";
 import { UrgencyBadge } from "@/components/UrgencyBadge";
 import { sendMessageStream } from "@/lib/api";
 import type {
@@ -18,6 +19,7 @@ import type {
   EvalScores,
   PatientContext,
   PatientMemory,
+  ProviderRecommendation,
   UrgencyPrediction,
   GuardrailLog,
   GuardrailResult,
@@ -45,6 +47,7 @@ export default function App() {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [icd10Codes, setIcd10Codes] = useState<ICD10Code[]>([]);
   const [urgency, setUrgency] = useState<UrgencyPrediction | null>(null);
+  const [recommendations, setRecommendations] = useState<ProviderRecommendation[]>([]);
   const [patientMemories, setPatientMemories] = useState<PatientMemory[]>([]);
   const [patientContext, setPatientContext] = useState<PatientContext | null>(null);
   const [evalHistory, setEvalHistory] = useState<EvalScores[]>([]);
@@ -134,6 +137,8 @@ export default function App() {
           },
 
           onICD10: (codes) => setIcd10Codes(codes),
+
+          onRecommendations: (providers) => setRecommendations(providers),
 
           onMemory: (newMems, ctx) => {
             setPatientMemories((prev) => [...prev, ...newMems]);
@@ -411,6 +416,7 @@ export default function App() {
                   setEvalScores(null);
                   setIcd10Codes([]);
                   setUrgency(null);
+                  setRecommendations([]);
                   setRagGuidelines([]);
                   setRagContext(null);
                   setPatientMemories([]);
@@ -579,6 +585,7 @@ export default function App() {
                   </div>
                 )}
                 {urgency && <UrgencyBadge prediction={urgency} />}
+                {recommendations.length > 0 && <RecommendationPanel providers={recommendations} />}
                 {icd10Codes.length > 0 && <ICD10Panel codes={icd10Codes} />}
               </div>
             ) : rightPanel === "rag" ? (
