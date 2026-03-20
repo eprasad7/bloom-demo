@@ -515,7 +515,19 @@ export default function App() {
             ) : rightPanel === "journey" ? (
               <CareJourney entries={journey} />
             ) : rightPanel === "memory" ? (
-              <MemoryPanel currentSessionId={sessionId} />
+              <MemoryPanel
+                currentSessionId={sessionId}
+                liveData={{
+                  messages,
+                  journey,
+                  icd10Codes,
+                  urgency,
+                  evalScores,
+                  guidelines: ragGuidelines,
+                  auditEvents,
+                  carePathway: messages.findLast(m => m.care_pathway)?.care_pathway ?? null,
+                }}
+              />
             ) : (
               <AuditLog events={auditEvents} />
             )}
