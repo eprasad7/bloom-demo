@@ -9,16 +9,18 @@ AI-powered women's health care navigation with clinical guardrails. A full-stack
 ```
 ┌─ Frontend (Next.js 15) ──────────────────────────────────────────┐
 │                                                                   │
-│  Chat UI          Guardrail Inspector    RAG Visualizer           │
-│  (Markdown +      (Input/Output Rails    (Retrieved Chunks +      │
-│   Streaming SSE    + ICD-10 Codes         Context Window +        │
-│   + Thinking)      + ML Urgency)          Eval Scores)            │
+│  Chat UI          Search UI              Agent UI                 │
+│  (Markdown +      (Semantic search       (10-step autonomous      │
+│   Streaming SSE    across 137 docs)       care assessment)         │
+│   + Thinking)                                                     │
 │                                                                   │
-│  Care Journey     Memory Panel            Metrics Panel           │
-│  (Timeline)       (Episodic/Semantic/     (Latency + Risk +       │
-│                    Working/Procedural)     Tokens + Eval Trend)    │
-│                                                                   │
-│  Prompt Playground (Edit prompt + Auto-evolve to target F-score)  │
+│  Guardrail        RAG Visualizer         Memory Panel             │
+│  Inspector        (Chunks + Context      (Episodic/Semantic/      │
+│  (Rails + ICD-10   Window + Eval)         Working/Procedural)     │
+│   + ML Urgency                                                    │
+│   + Providers)    Metrics Panel          Prompt Playground        │
+│                   (Latency + Risk +      (Auto-evolve to          │
+│                    Tokens + Trends)       target F-score)          │
 └───────────────────────────────────────────────────────────────────┘
                               │ SSE Stream
 ┌─ Backend (FastAPI) ─────────▼─────────────────────────────────────┐
@@ -97,6 +99,37 @@ AI-powered women's health care navigation with clinical guardrails. A full-stack
 - 35+ symptom-to-diagnosis code mappings for women's health
 - Codes displayed in guardrails panel with matched terms
 
+### Clinical Search
+- Semantic search across all 137 clinical documents via `POST /api/search`
+- Sample search queries for quick exploration
+- Relevance score bars and content previews
+- Searches the same ChromaDB vector store used by the RAG pipeline
+
+### Autonomous Care Assessment Agent
+- 10-step autonomous pipeline via `POST /api/agent/assess`
+- Steps: safety check, context extraction, urgency classification (ML), ICD-10 mapping, RAG retrieval, clinical assessment (Sonnet + thinking), output safety check, pathway classification (Haiku), eval judge (Haiku), provider recommendations
+- Full execution trace with expandable step-by-step output
+- Model orchestration summary showing all 7 models/engines with call counts and latency
+
+### Multi-Model Orchestration
+7 different models/engines coordinated in a single pipeline:
+| Model | Role |
+|-------|------|
+| Regex engine | Input/output safety rails |
+| Regex NER | Patient context extraction |
+| TF-IDF + Gradient Boosting (sklearn) | Urgency classification |
+| ChromaDB + MiniLM-L6-v2 | Semantic search and RAG retrieval |
+| Claude Sonnet 4 (extended thinking) | Clinical assessment generation |
+| Claude Haiku 4.5 | Care pathway routing + eval judge |
+| Rule-based scoring engine | Provider recommendations |
+
+### Provider Recommendation Engine
+- Rule-based scoring with 40+ symptom-provider routing rules
+- Care pathway boosts (maternity, fertility, postpartum, menopause, pediatrics)
+- Urgency levels (routine/soon/urgent/emergency)
+- Uses episodic memory (symptoms, conditions, gestational age) as input
+- Maps to Maven's core product: matching members with the right provider
+
 ## Quick Start
 
 ### Backend
@@ -167,6 +200,8 @@ Open http://localhost:3000
 | `POST /api/chat/stream` | SSE streaming chat with full pipeline |
 | `POST /api/chat/playground` | Test custom system prompt with eval |
 | `POST /api/chat/auto-evolve` | Iterative prompt optimization |
+| `POST /api/search` | Semantic search across 137 clinical documents |
+| `POST /api/agent/assess` | 10-step autonomous care assessment agent |
 | `POST /api/eval` | Batch eval over 15 test cases |
 | `GET /api/sessions` | List all sessions |
 | `GET /api/sessions/:id` | Session detail with messages |

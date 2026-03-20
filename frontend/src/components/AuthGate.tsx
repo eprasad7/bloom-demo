@@ -99,11 +99,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Stats */}
-          <div className="hero-animate hero-delay-5 flex gap-14">
+          <div className="hero-animate hero-delay-5 flex gap-12">
             {[
-              { value: "137", label: "Clinical Documents", sub: "PubMed, OpenFDA, MedlinePlus, ACOG, WHO, CDC" },
-              { value: "15", label: "Eval Test Cases", sub: "LLM-as-judge faithfulness + relevance" },
-              { value: "35+", label: "ICD-10 Codes", sub: "Symptom-to-diagnosis mapping" },
+              { value: "137", label: "Clinical Documents", sub: "4 live data sources" },
+              { value: "10", label: "Agent Steps", sub: "Autonomous pipeline" },
+              { value: "7", label: "Models Orchestrated", sub: "ML + LLM + rules" },
+              { value: "4", label: "Memory Types", sub: "Episodic to procedural" },
             ].map((stat) => (
               <div key={stat.label}>
                 <p className="text-4xl font-bold text-maven-400 leading-none mb-1.5">{stat.value}</p>
@@ -187,13 +188,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                   Walk me through a recent AI/ML product you shipped 0 to 1?
                 </p>
                 <p className="text-[11px] text-text-secondary leading-relaxed">
-                  This demo is the answer. Bloom Care AI is
-                  a full-stack care navigation agent with
-                  RAG over 137 clinical documents from PubMed, OpenFDA,
-                  MedlinePlus, and ACOG/WHO/CDC guidelines. It includes 5-layer
-                  clinical guardrails modeled after NeMo, extended thinking for
-                  visible clinical reasoning, ICD-10 code mapping, streaming SSE,
-                  an LLM-as-judge eval system, and a prompt playground.
+                  This demo is the answer. Bloom Care AI is a full-stack care
+                  navigation system with a 10-step autonomous agent that orchestrates
+                  7 different models: RAG over 137 clinical docs, an sklearn urgency
+                  classifier, Claude Sonnet with extended thinking, Haiku for routing
+                  and eval, 5-layer clinical guardrails, a provider recommendation
+                  engine, semantic search, and an auto-evolve loop that iteratively
+                  optimizes prompts to hit faithfulness targets.
                 </p>
               </div>
 
@@ -203,12 +204,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                 </p>
                 <p className="text-[11px] text-text-secondary leading-relaxed">
                   At Exmplr, I built a clinical trial matching system that processes
-                  562K trials with 19.8M RAG vectors, using multi-agent orchestration
-                  and embedding pipelines at scale. This demo applies those same
-                  patterns to Maven&apos;s domain: care routing via Haiku, Sonnet with
-                  extended thinking, guardrails as a separate validation layer, and
-                  automated eval to catch hallucination. Safety is infrastructure here,
-                  not an afterthought.
+                  562K trials with 19.8M RAG vectors using multi-agent orchestration
+                  at scale. This demo shows the same patterns: multi-model orchestration
+                  (Sonnet for generation, Haiku for routing and eval, sklearn for
+                  classification, ChromaDB for retrieval), guardrails as a separate
+                  validation layer, episodic memory extraction, and automated eval
+                  with LLM-as-judge. Every component is production-patterned.
                 </p>
               </div>
             </div>
@@ -220,7 +221,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
               Try These Scenarios
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {["Emergency Detection", "Medication Safety", "RAG + Citations", "Model Reasoning", "Live Evals"].map((s) => (
+              {["Agent Assessment", "Semantic Search", "Guardrails", "RAG + Citations", "Provider Matching", "Auto-Evolve", "Memory"].map((s) => (
                 <span key={s} className="text-[10px] px-2.5 py-1 rounded-full border border-border-default text-text-muted">
                   {s}
                 </span>
