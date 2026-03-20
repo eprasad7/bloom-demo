@@ -4,25 +4,49 @@ import { useState } from "react";
 import Image from "next/image";
 import { ShieldIcon, SearchIcon, BrainIcon, ChartIcon, AlertIcon } from "@/components/Icons";
 
-const VALID_CODES = ["edgetech-2026"];
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [authenticated, setAuthenticated] = useState(() => {
     if (typeof window === "undefined") return false;
-    return sessionStorage.getItem("bloom_auth") === "true";
+    return !!sessionStorage.getItem("bloom_access_token");
   });
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (VALID_CODES.includes(code.trim().toLowerCase())) {
-      sessionStorage.setItem("bloom_auth", "true");
-      setAuthenticated(true);
-    } else {
+    if (verifying) return;
+    setVerifying(true);
+    setError(false);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code.trim() }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.valid && data.token) {
+          sessionStorage.setItem("bloom_access_token", data.token);
+          setAuthenticated(true);
+        } else {
+          setError(true);
+          setTimeout(() => setError(false), 2000);
+        }
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 2000);
+      }
+    } catch {
       setError(true);
       setTimeout(() => setError(false), 2000);
     }
+
+    setVerifying(false);
   };
 
   if (authenticated) return <>{children}</>;
@@ -171,7 +195,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                 type="submit"
                 className="w-full bg-maven-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-maven-500 active:bg-maven-700 transition-all min-h-[44px] shadow-lg shadow-maven-600/20 hover:shadow-maven-500/30 hover:-translate-y-px"
               >
-                Enter Demo
+                {verifying ? "Verifying..." : "Enter Demo"}
               </button>
             </form>
           </div>

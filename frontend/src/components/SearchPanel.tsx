@@ -3,8 +3,7 @@
 import { useCallback, useState } from "react";
 import { SearchIcon } from "@/components/Icons";
 import type { RetrievedGuideline } from "@/lib/types";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+import { API_BASE, getAuthHeaders } from "@/lib/api";
 
 const SAMPLE_SEARCHES = [
   "preeclampsia warning signs",
@@ -31,7 +30,7 @@ export function SearchPanel() {
     try {
       const res = await fetch(`${API_BASE}/api/search`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ query: searchQuery, n_results: 10 }),
       });
       if (res.ok) {

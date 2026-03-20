@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import type { EvalScores, Message } from "@/lib/types";
 import { CheckIcon, XIcon, BrainIcon } from "@/components/Icons";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+import { API_BASE, getAuthHeaders } from "@/lib/api";
 
 const RISK_STYLES = {
   safe: "",
@@ -41,8 +41,7 @@ export function ChatMessage({
     if (improving || !hasFailed) return;
     setImproving(true);
 
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (apiKey) headers["x-api-key"] = apiKey;
+    const headers = getAuthHeaders(apiKey);
 
     try {
       const res = await fetch(`${API_BASE}/api/chat/improve`, {

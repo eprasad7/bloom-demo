@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { EvalScores, RetrievedGuideline } from "@/lib/types";
 import { BrainIcon, ChartIcon, SearchIcon } from "@/components/Icons";
+import { API_BASE, getAuthHeaders } from "@/lib/api";
 
 interface EvalRun {
   id: number;
@@ -56,9 +57,7 @@ export function PromptPlayground({
   const [runCount, setRunCount] = useState(0);
 
   const headers = useCallback((): Record<string, string> => {
-    const h: Record<string, string> = { "Content-Type": "application/json" };
-    if (apiKey) h["x-api-key"] = apiKey;
-    return h;
+    return getAuthHeaders(apiKey);
   }, [apiKey]);
 
   const runTest = useCallback(async () => {
@@ -69,7 +68,7 @@ export function PromptPlayground({
     setGuidelines([]);
     setEvolveIterations([]);
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+    const apiBase = API_BASE;
     try {
       const res = await fetch(`${apiBase}/api/chat/playground`, {
         method: "POST",
@@ -116,7 +115,7 @@ export function PromptPlayground({
     setEvolveFinalPrompt("");
     setEvolveTargetMet(false);
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+    const apiBase = API_BASE;
     try {
       const res = await fetch(`${apiBase}/api/chat/auto-evolve`, {
         method: "POST",

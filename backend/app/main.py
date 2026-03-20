@@ -17,6 +17,12 @@ from app.services.sessions import init_db
 load_dotenv()
 
 DEFAULT_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+DEMO_ACCESS_CODE = os.getenv("DEMO_ACCESS_CODE", "edgetech-2026")
+
+# Simple in-memory rate limiting
+_request_counts: dict[str, list[float]] = {}
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX = 20  # requests per window per IP
 
 
 def _get_client(api_key_header: str | None = None) -> anthropic.AsyncAnthropic:
@@ -53,9 +59,84 @@ app.add_middleware(
         "https://bloom.ish.dev",
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "x-api-key", "x-access-token"],
 )
+
+
+import time
+from fastapi import Request
+
+
+def _check_rate_limit(client_ip: str) -> bool:
+    """Returns True if request is allowed, False if rate limited."""
+    now = time.time()
+    if client_ip not in _request_counts:
+        _request_counts[client_ip] = []
+
+    # Clean old entries
+    _request_counts[client_ip] = [
+        t for t in _request_counts[client_ip] if now - t < RATE_LIMIT_WINDOW
+    ]
+
+    if len(_request_counts[client_ip]) >= RATE_LIMIT_MAX:
+        return False
+
+    _request_counts[client_ip].append(now)
+    return True
+
+
+def _verify_access_token(token: str | None) -> bool:
+    """Verify the access token from the client."""
+    if not token:
+        return False
+    # Token is a simple hash of the access code, set by the client after login
+    import hashlib
+    expected = hashlib.sha256(DEMO_ACCESS_CODE.encode()).hexdigest()[:32]
+    return token == expected
+
+
+@app.post("/api/auth/verify")
+async def verify_access_code(body: dict) -> dict:
+    """Verify access code and return a session token."""
+    import hashlib
+    code = body.get("code", "").strip().lower()
+    if code == DEMO_ACCESS_CODE.lower():
+        token = hashlib.sha256(DEMO_ACCESS_CODE.encode()).hexdigest()[:32]
+        return {"valid": True, "token": token}
+    return {"valid": False}
+
+
+@app.middleware("http")
+async def auth_and_rate_limit(request: Request, call_next):
+    """Middleware: rate limiting + access token verification on protected routes."""
+    path = request.url.path
+
+    # Public endpoints (no auth needed)
+    public_paths = ["/api/health", "/api/auth/verify", "/docs", "/openapi.json"]
+    if any(path.startswith(p) for p in public_paths) or request.method == "OPTIONS":
+        return await call_next(request)
+
+    # Rate limiting
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Try again in a minute."},
+        )
+
+    # Access token check for all /api/ routes
+    if path.startswith("/api/"):
+        token = request.headers.get("x-access-token")
+        if not _verify_access_token(token):
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or missing access token."},
+            )
+
+    return await call_next(request)
 
 
 @app.post("/api/chat", response_model=ChatResponse)

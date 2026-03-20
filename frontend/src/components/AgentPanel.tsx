@@ -3,8 +3,7 @@
 import { useCallback, useState } from "react";
 import { BrainIcon, ShieldIcon, SearchIcon, AlertIcon, ChartIcon, UserIcon, HospitalIcon, FolderIcon, ClockIcon, CheckIcon } from "@/components/Icons";
 import type { ReactNode } from "react";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+import { API_BASE, getAuthHeaders } from "@/lib/api";
 
 interface AgentStep {
   step: number;
@@ -58,8 +57,7 @@ export function AgentPanel({ apiKey }: { apiKey: string }) {
     setResult(null);
     setQuery(message);
 
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (apiKey) headers["x-api-key"] = apiKey;
+    const headers = getAuthHeaders(apiKey);
 
     try {
       const res = await fetch(`${API_BASE}/api/agent/assess`, {

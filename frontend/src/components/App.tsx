@@ -15,7 +15,7 @@ import { MetricsPanel } from "@/components/MetricsPanel";
 import { RAGVisualizer } from "@/components/RAGVisualizer";
 import { RecommendationPanel } from "@/components/RecommendationPanel";
 import { UrgencyBadge } from "@/components/UrgencyBadge";
-import { sendMessageStream } from "@/lib/api";
+import { sendMessageStream, getAuthHeaders } from "@/lib/api";
 import type {
   AuditEvent,
   EvalScores,
@@ -75,7 +75,7 @@ export default function App() {
   useEffect(() => {
     if (!sessionId) return;
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-    fetch(`${apiBase}/api/sessions/${sessionId}`)
+    fetch(`${apiBase}/api/sessions/${sessionId}`, { headers: getAuthHeaders() })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.messages && data.messages.length > 0) {

@@ -30,7 +30,7 @@ interface MemoryStats {
   last_activity: string | null;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+import { API_BASE, getAuthHeaders } from "@/lib/api";
 
 const PATHWAY_COLORS: Record<string, string> = {
   maternity: "text-maven-400",
@@ -72,8 +72,8 @@ export function MemoryPanel({
     setLoading(true);
     try {
       const [sessRes, statsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/sessions`),
-        fetch(`${API_BASE}/api/memory/stats`),
+        fetch(`${API_BASE}/api/sessions`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE}/api/memory/stats`, { headers: getAuthHeaders() }),
       ]);
       if (sessRes.ok) setSessions(await sessRes.json());
       if (statsRes.ok) {
@@ -95,7 +95,7 @@ export function MemoryPanel({
   const viewSession = async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/sessions/${id}`);
+      const res = await fetch(`${API_BASE}/api/sessions/${id}`, { headers: getAuthHeaders() });
       if (res.ok) {
         setSelectedSession(await res.json());
         setView("detail");

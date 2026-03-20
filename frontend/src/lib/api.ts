@@ -37,7 +37,15 @@ export interface StreamCallbacks {
 
 // In production, call backend directly via public URL.
 // In development, Next.js rewrites proxy /api/* to localhost:8000.
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+export function getAuthHeaders(apiKey?: string | null): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const accessToken = typeof window !== "undefined" ? sessionStorage.getItem("bloom_access_token") : null;
+  if (accessToken) headers["x-access-token"] = accessToken;
+  if (apiKey) headers["x-api-key"] = apiKey;
+  return headers;
+}
 
 export async function sendMessageStream(
   message: string,
@@ -45,12 +53,7 @@ export async function sendMessageStream(
   callbacks: StreamCallbacks,
   apiKey?: string | null
 ): Promise<void> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (apiKey) {
-    headers["x-api-key"] = apiKey;
-  }
+  const headers = getAuthHeaders(apiKey);
 
   const res = await fetch(`${API_BASE}/api/chat/stream`, {
     method: "POST",
