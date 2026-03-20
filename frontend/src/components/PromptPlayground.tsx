@@ -69,7 +69,7 @@ export function PromptPlayground({
     setTestResponse("");
     setEvalResult(null);
     setGuidelines([]);
-    setSuggestion("");
+    setEvolveResult(null);
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
     try {
