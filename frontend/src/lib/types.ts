@@ -66,6 +66,23 @@ export interface RAGContext {
   guidelines_in_prompt: number;
 }
 
+export interface PatientMemory {
+  type: string;
+  label: string;
+  value: string;
+  source: string;
+}
+
+export interface PatientContext {
+  demographics: Record<string, string>;
+  pregnancy: Record<string, string>;
+  symptoms: string[];
+  conditions: string[];
+  medications: string[];
+  care_context: Record<string, string>;
+  total_facts: number;
+}
+
 export interface UrgencyPrediction {
   urgency_level: number;
   urgency_label: string;

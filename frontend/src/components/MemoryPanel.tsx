@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ClockIcon, MessageIcon, FolderIcon, ChartIcon, BrainIcon, ShieldIcon, SearchIcon, HospitalIcon, AlertIcon } from "@/components/Icons";
-import type { AuditEvent, CarePathway, EvalScores, ICD10Code, JourneyEntry, Message, RetrievedGuideline, UrgencyPrediction } from "@/lib/types";
+import type { AuditEvent, CarePathway, EvalScores, ICD10Code, JourneyEntry, Message, PatientContext, PatientMemory, RetrievedGuideline, UrgencyPrediction } from "@/lib/types";
 
 interface SessionSummary {
   session_id: string;
@@ -51,6 +51,8 @@ interface LiveSessionData {
   guidelines: RetrievedGuideline[];
   auditEvents: AuditEvent[];
   carePathway: CarePathway | null;
+  patientMemories: PatientMemory[];
+  patientContext: PatientContext | null;
 }
 
 export function MemoryPanel({
@@ -277,75 +279,110 @@ export function MemoryPanel({
             </div>
           </div>
 
-          {/* Live memory slots */}
-          <div className="space-y-2">
-            {/* Guardrails memory */}
-            {liveData.auditEvents.filter(e => e.event_type === "input_rail" || e.event_type === "output_rail").length > 0 && (
-              <MemorySlot
-                icon={<ShieldIcon size={12} />}
-                label="Guardrail Events"
-                color="text-status-blocked"
-                items={liveData.auditEvents
-                  .filter(e => e.event_type === "input_rail" || e.event_type === "output_rail")
-                  .map(e => e.detail)}
-              />
-            )}
+          {/* Memory architecture */}
+          <div className="space-y-3">
+            <h4 className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">
+              Agent Memory Architecture
+            </h4>
 
-            {/* RAG memory */}
-            {liveData.guidelines.length > 0 && (
-              <MemorySlot
-                icon={<SearchIcon size={12} />}
-                label="Retrieved Guidelines"
-                color="text-teal-400"
-                items={liveData.guidelines.map(g => `${g.source} (${Math.round(g.relevance_score * 100)}%)`)}
-              />
-            )}
-
-            {/* Urgency memory */}
-            {liveData.urgency && (
-              <MemorySlot
-                icon={<AlertIcon size={12} />}
-                label="ML Urgency"
-                color="text-status-caution"
-                items={[`${liveData.urgency.urgency_label} (${Math.round(liveData.urgency.confidence * 100)}% confidence)`]}
-              />
-            )}
-
-            {/* ICD-10 memory */}
-            {liveData.icd10Codes.length > 0 && (
-              <MemorySlot
-                icon={<HospitalIcon size={12} />}
-                label="ICD-10 Codes"
-                color="text-teal-500"
-                items={liveData.icd10Codes.map(c => `${c.code}: ${c.description}`)}
-              />
-            )}
-
-            {/* Eval memory */}
-            {liveData.evalScores && liveData.evalScores.faithfulness >= 0 && (
-              <MemorySlot
-                icon={<ChartIcon size={12} />}
-                label="Eval Scores"
-                color="text-maven-400"
-                items={[
-                  `Faithfulness: ${Math.round(liveData.evalScores.faithfulness * 100)}%`,
-                  `Relevance: ${Math.round(liveData.evalScores.relevance * 100)}%`,
-                  liveData.evalScores.reasoning,
-                ].filter(Boolean)}
-              />
-            )}
-
-            {/* Conversation context window */}
-            <MemorySlot
+            {/* 1. Episodic Memory - extracted patient facts */}
+            <MemorySection
+              title="Episodic Memory"
+              subtitle="Facts extracted from conversation"
+              color="text-teal-400"
               icon={<BrainIcon size={12} />}
-              label="Context Window"
+            >
+              {liveData.patientContext ? (
+                <div className="space-y-1.5">
+                  {Object.values(liveData.patientContext.pregnancy).length > 0 && (
+                    <FactGroup label="Pregnancy" items={Object.values(liveData.patientContext.pregnancy)} color="bg-maven-400" />
+                  )}
+                  {Object.values(liveData.patientContext.demographics).length > 0 && (
+                    <FactGroup label="Demographics" items={Object.values(liveData.patientContext.demographics)} color="bg-teal-400" />
+                  )}
+                  {liveData.patientContext.symptoms.length > 0 && (
+                    <FactGroup label="Symptoms" items={liveData.patientContext.symptoms} color="bg-status-caution" />
+                  )}
+                  {liveData.patientContext.conditions.length > 0 && (
+                    <FactGroup label="Conditions" items={liveData.patientContext.conditions} color="bg-status-blocked" />
+                  )}
+                  {liveData.patientContext.medications.length > 0 && (
+                    <FactGroup label="Medications" items={liveData.patientContext.medications} color="bg-teal-500" />
+                  )}
+                  {Object.values(liveData.patientContext.care_context).length > 0 && (
+                    <FactGroup label="Care Context" items={Object.values(liveData.patientContext.care_context)} color="bg-maven-300" />
+                  )}
+                  {liveData.patientContext.total_facts === 0 && (
+                    <p className="text-[9px] text-text-muted italic">No facts extracted yet</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[9px] text-text-muted italic">Waiting for conversation...</p>
+              )}
+            </MemorySection>
+
+            {/* 2. Semantic Memory - RAG knowledge base */}
+            <MemorySection
+              title="Semantic Memory"
+              subtitle="Retrieved clinical knowledge"
+              color="text-teal-500"
+              icon={<SearchIcon size={12} />}
+            >
+              {liveData.guidelines.length > 0 ? (
+                <div className="space-y-0.5">
+                  {liveData.guidelines.map((g, i) => (
+                    <p key={i} className="text-[9px] text-text-secondary truncate">
+                      [{i + 1}] {g.source} ({Math.round(g.relevance_score * 100)}%)
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[9px] text-text-muted italic">137 docs in vector store, 0 retrieved</p>
+              )}
+            </MemorySection>
+
+            {/* 3. Working Memory - current context */}
+            <MemorySection
+              title="Working Memory"
+              subtitle="Active conversation context"
               color="text-maven-300"
-              items={[
-                `${liveData.messages.length} messages in conversation history`,
-                `${liveData.journey.length} care journey entries accumulated`,
-                `Session persists across page reloads via session ID`,
-              ]}
-            />
+              icon={<MessageIcon size={12} />}
+            >
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <MiniStat value={userMsgs.length} label="Queries" />
+                <MiniStat value={assistantMsgs.length} label="Responses" />
+                <MiniStat value={liveData.journey.length} label="Journey" />
+              </div>
+            </MemorySection>
+
+            {/* 4. Procedural Memory - guardrails + evals */}
+            <MemorySection
+              title="Procedural Memory"
+              subtitle="Safety rules and evaluation"
+              color="text-status-caution"
+              icon={<ShieldIcon size={12} />}
+            >
+              <div className="space-y-1">
+                {liveData.auditEvents
+                  .filter(e => e.event_type === "input_rail" || e.event_type === "output_rail")
+                  .map((e, i) => (
+                    <p key={i} className="text-[9px] text-text-secondary truncate">{e.detail}</p>
+                  ))}
+                {liveData.urgency && (
+                  <p className="text-[9px] text-text-secondary">
+                    Urgency: {liveData.urgency.urgency_label} ({Math.round(liveData.urgency.confidence * 100)}%)
+                  </p>
+                )}
+                {liveData.evalScores && liveData.evalScores.faithfulness >= 0 && (
+                  <p className="text-[9px] text-text-secondary">
+                    Eval: F={Math.round(liveData.evalScores.faithfulness * 100)}% R={Math.round(liveData.evalScores.relevance * 100)}%
+                  </p>
+                )}
+                {liveData.auditEvents.length === 0 && !liveData.urgency && (
+                  <p className="text-[9px] text-text-muted italic">5 input/output rails active</p>
+                )}
+              </div>
+            </MemorySection>
           </div>
 
           {/* DB note */}
@@ -386,6 +423,55 @@ function MemorySlot({
           <p className="text-[9px] text-text-muted">+{items.length - 5} more</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function MemorySection({
+  title,
+  subtitle,
+  color,
+  icon,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  color: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="message-enter bg-surface-elevated border border-border-subtle rounded-lg p-3">
+      <div className={`flex items-center gap-1.5 mb-0.5 ${color}`}>
+        {icon}
+        <span className="text-[10px] font-semibold">{title}</span>
+      </div>
+      <p className="text-[8px] text-text-muted mb-2">{subtitle}</p>
+      {children}
+    </div>
+  );
+}
+
+function FactGroup({ label, items, color }: { label: string; items: string[]; color: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-[8px] text-text-muted w-16 shrink-0 pt-0.5">{label}</span>
+      <div className="flex flex-wrap gap-1">
+        {items.map((item, i) => (
+          <span key={i} className={`text-[9px] px-1.5 py-0.5 rounded ${color}/15 text-text-primary font-medium`}>
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="bg-surface-primary rounded p-1.5">
+      <p className="text-sm font-bold text-text-primary">{value}</p>
+      <p className="text-[7px] text-text-muted uppercase">{label}</p>
     </div>
   );
 }

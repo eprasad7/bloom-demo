@@ -3,6 +3,8 @@ import type {
   CarePathway,
   EvalScores,
   GuardrailResult,
+  PatientContext,
+  PatientMemory,
   UrgencyPrediction,
   ICD10Code,
   JourneyEntry,
@@ -14,6 +16,7 @@ export interface StreamCallbacks {
   onSession: (sessionId: string) => void;
   onInputRails: (result: GuardrailResult) => void;
   onICD10: (codes: ICD10Code[]) => void;
+  onMemory: (newMemories: PatientMemory[], context: PatientContext) => void;
   onUrgency: (prediction: UrgencyPrediction) => void;
   onRAG: (guidelines: RetrievedGuideline[]) => void;
   onRAGContext: (context: RAGContext) => void;
@@ -114,6 +117,12 @@ function dispatchEvent(
       break;
     case "icd10":
       cb.onICD10(data.codes as ICD10Code[]);
+      break;
+    case "memory":
+      cb.onMemory(
+        data.new_memories as PatientMemory[],
+        data.patient_context as PatientContext,
+      );
       break;
     case "urgency":
       cb.onUrgency(data as unknown as UrgencyPrediction);

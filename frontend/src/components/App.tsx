@@ -16,6 +16,8 @@ import { sendMessageStream } from "@/lib/api";
 import type {
   AuditEvent,
   EvalScores,
+  PatientContext,
+  PatientMemory,
   UrgencyPrediction,
   GuardrailLog,
   GuardrailResult,
@@ -40,6 +42,8 @@ export default function App() {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [icd10Codes, setIcd10Codes] = useState<ICD10Code[]>([]);
   const [urgency, setUrgency] = useState<UrgencyPrediction | null>(null);
+  const [patientMemories, setPatientMemories] = useState<PatientMemory[]>([]);
+  const [patientContext, setPatientContext] = useState<PatientContext | null>(null);
   const [ragGuidelines, setRagGuidelines] = useState<RetrievedGuideline[]>([]);
   const [ragContext, setRagContext] = useState<RAGContext | null>(null);
   const [evalScores, setEvalScores] = useState<EvalScores | null>(null);
@@ -100,6 +104,11 @@ export default function App() {
           },
 
           onICD10: (codes) => setIcd10Codes(codes),
+
+          onMemory: (newMems, ctx) => {
+            setPatientMemories((prev) => [...prev, ...newMems]);
+            setPatientContext(ctx);
+          },
 
           onUrgency: (pred) => setUrgency(pred),
 
@@ -526,6 +535,8 @@ export default function App() {
                   guidelines: ragGuidelines,
                   auditEvents,
                   carePathway: messages.findLast(m => m.care_pathway)?.care_pathway ?? null,
+                  patientMemories,
+                  patientContext,
                 }}
               />
             ) : (

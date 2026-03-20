@@ -15,6 +15,7 @@ from app.models import (
 )
 from app.ml.urgency_classifier import predict_urgency
 from app.services.audit import AuditLogger
+from app.services.memory import PatientContext
 from app.services.eval import evaluate_response
 from app.services.guardrails import run_input_rails, run_output_rails
 from app.services.icd10 import lookup_icd10_codes
@@ -231,6 +232,25 @@ async def process_message_stream(
             timer_key="icd10",
         )
         yield sse("icd10", {"codes": icd10_codes})
+
+        # ── Episodic Memory Extraction ──
+        audit.start_timer("memory")
+        patient_ctx = PatientContext()
+        # Extract from current message and all prior user messages
+        prior_messages = await get_messages(session_id, limit=20)
+        for m in prior_messages:
+            if m["role"] == "user":
+                patient_ctx.update(m["content"])
+        new_memories = patient_ctx.update(message)
+        audit.log(
+            "memory_extraction",
+            f"Extracted {len(new_memories)} new facts, {patient_ctx.to_summary()['total_facts']} total",
+            timer_key="memory",
+        )
+        yield sse("memory", {
+            "new_memories": new_memories,
+            "patient_context": patient_ctx.to_summary(),
+        })
 
         # ── ML Urgency Classification ──
         audit.start_timer("urgency_ml")
