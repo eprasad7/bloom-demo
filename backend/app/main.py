@@ -343,7 +343,7 @@ async def auto_evolve(
                     "question": question[:50] + "..." if len(question) > 50 else question,
                     "faithfulness": eval_scores["faithfulness"],
                     "relevance": eval_scores["relevance"],
-                    "reasoning": eval_scores["reasoning"],
+                    "reasoning": eval_scores.get("faithfulness_reason", ""),
                 })
 
                 yield sse("question_eval", {
@@ -709,7 +709,7 @@ async def agent_assess(
     step("Evaluate Response Quality", "Claude Haiku 4.5 (LLM-as-judge)", {
         "faithfulness": eval_scores["faithfulness"],
         "relevance": eval_scores["relevance"],
-        "reasoning": eval_scores["reasoning"],
+        "reasoning": eval_scores.get("faithfulness_reason", ""),
     }, (time.perf_counter() - t) * 1000)
 
     # Step 10: Provider recommendations

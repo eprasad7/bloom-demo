@@ -94,7 +94,6 @@ def search_medlineplus(query: str, max_results: int = 3) -> list[dict]:
 
 def _strip_html(text: str) -> str:
     """Remove HTML tags from text."""
-    import re
     clean = re.sub(r"<[^>]+>", "", text)
     clean = re.sub(r"\s+", " ", clean).strip()
     return clean

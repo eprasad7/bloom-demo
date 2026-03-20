@@ -36,7 +36,7 @@ EMERGENCY_PATTERNS: list[tuple[str, str]] = [
     ),
     (
         r"(fever.*(10[2-9]|1[1-9]\d)\s*°?\s*(f|deg))",
-        "High fever — urgent",
+        "High fever, urgent",
     ),
     (
         r"(swollen.*(face|hands).*pregnan|pregnan.*swollen.*(face|hands))",
@@ -60,7 +60,7 @@ JAILBREAK_PATTERNS: list[str] = [
     r"pretend\s+(you|to\s+be)",
     r"DAN\s+mode",
     r"system\s*prompt",
-    r"act\s+as\s+(a|an)\s+(?!maven|health)",
+    r"act\s+as\s+(a|an)\s+(?!bloom|health)",
     r"bypass\s+(your|the)\s+(safety|guard|filter)",
 ]
 
@@ -117,7 +117,7 @@ def run_input_rails(user_message: str) -> GuardrailResult:
                 rails_triggered=[f"emergency:{label}"],
                 escalation_required=True,
                 modified_response=(
-                    f"⚠️ **URGENT: {label}**\n\n"
+                    f"**URGENT: {label}**\n\n"
                     "If you or someone nearby is experiencing a medical emergency, "
                     "**please call 911 immediately** or go to your nearest emergency room. "
                     "Do not wait. This could be life-threatening.\n\n"

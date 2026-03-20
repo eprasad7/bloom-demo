@@ -128,7 +128,7 @@ AI-powered women's health care navigation with clinical guardrails. A full-stack
 - Care pathway boosts (maternity, fertility, postpartum, menopause, pediatrics)
 - Urgency levels (routine/soon/urgent/emergency)
 - Uses episodic memory (symptoms, conditions, gestational age) as input
-- Maps to Maven's core product: matching members with the right provider
+- Demonstrates member-to-provider matching, a core healthcare platform capability
 
 ## Quick Start
 
@@ -202,6 +202,7 @@ Open http://localhost:3000
 | `POST /api/chat/auto-evolve` | Iterative prompt optimization |
 | `POST /api/search` | Semantic search across 137 clinical documents |
 | `POST /api/agent/assess` | 10-step autonomous care assessment agent |
+| `POST /api/chat/improve` | Re-generate with stricter grounding after eval fail |
 | `POST /api/eval` | Batch eval over 15 test cases |
 | `GET /api/sessions` | List all sessions |
 | `GET /api/sessions/:id` | Session detail with messages |

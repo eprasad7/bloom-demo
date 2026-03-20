@@ -460,7 +460,7 @@ async def process_message_stream(
             )
             audit.log(
                 "eval",
-                f"Faithfulness: {eval_scores['faithfulness']:.2f} | Relevance: {eval_scores['relevance']:.2f}",
+                f"Faithfulness: {eval_scores['faithfulness']} | Relevance: {eval_scores['relevance']} | Safety: {eval_scores.get('safety', '?')}",
                 timer_key="eval",
             )
             yield sse("eval", eval_scores)

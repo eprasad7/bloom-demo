@@ -404,35 +404,6 @@ export function MemoryPanel({
   );
 }
 
-function MemorySlot({
-  icon,
-  label,
-  color,
-  items,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  color: string;
-  items: string[];
-}) {
-  return (
-    <div className="message-enter bg-surface-elevated border border-border-subtle rounded-lg p-2.5">
-      <div className={`flex items-center gap-1.5 mb-1.5 ${color}`}>
-        {icon}
-        <span className="text-[9px] font-semibold uppercase tracking-wider">{label}</span>
-        <span className="text-[8px] text-text-muted ml-auto">{items.length}</span>
-      </div>
-      <div className="space-y-0.5">
-        {items.slice(0, 5).map((item, i) => (
-          <p key={i} className="text-[10px] text-text-secondary leading-snug truncate">{item}</p>
-        ))}
-        {items.length > 5 && (
-          <p className="text-[9px] text-text-muted">+{items.length - 5} more</p>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function MemorySection({
   title,

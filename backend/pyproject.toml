@@ -1,7 +1,7 @@
 [project]
-name = "maven-mini"
+name = "bloom-care-ai"
 version = "0.1.0"
-description = "Maven Intelligence Mini — Women's Health Care Navigation Agent"
+description = "Bloom Care AI: Women's Health Care Navigation with Clinical Guardrails"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

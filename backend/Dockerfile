@@ -2,12 +2,12 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install dependencies
+# Copy all source first so pip install can find the package
 COPY pyproject.toml .
-RUN pip install --no-cache-dir .
-
-# Copy application code
 COPY app/ app/
+
+# Install dependencies
+RUN pip install --no-cache-dir .
 
 # Run data pipeline at build time to bake ChromaDB into the image
 RUN python -m app.data.pipeline.runner

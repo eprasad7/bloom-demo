@@ -1,4 +1,4 @@
-"""Data models for Maven Intelligence Mini."""
+"""Data models for Bloom Care AI."""
 
 from enum import Enum
 from pydantic import BaseModel
