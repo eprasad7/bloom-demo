@@ -398,6 +398,32 @@ export default function App() {
                 </div>
               )}
             </div>
+            {sessionId && (
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem("bloom_session_id");
+                  setSessionId(null);
+                  setMessages([]);
+                  setJourney([]);
+                  setAuditEvents([]);
+                  setAllAuditEvents([]);
+                  setEvalHistory([]);
+                  setEvalScores(null);
+                  setIcd10Codes([]);
+                  setUrgency(null);
+                  setRagGuidelines([]);
+                  setRagContext(null);
+                  setPatientMemories([]);
+                  setPatientContext(null);
+                  setGuardrailTriggerCount(0);
+                  setActiveGuardrails(null);
+                  setActiveRisk("safe");
+                }}
+                className="text-[11px] px-2.5 py-1 rounded-md border border-border-default text-text-muted hover:text-text-primary hover:border-border-focus transition-colors focus-ring"
+              >
+                New Chat
+              </button>
+            )}
             <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${sessionId ? "bg-status-safe" : "bg-text-muted"}`}
