@@ -186,8 +186,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                   Walk me through a recent AI/ML product you shipped 0 to 1?
                 </p>
                 <p className="text-[11px] text-text-secondary leading-relaxed">
-                  This demo is the answer. I built Bloom Care AI in
-                  about 3 hours. It&apos;s a full-stack care navigation agent with
+                  This demo is the answer. Bloom Care AI is
+                  a full-stack care navigation agent with
                   RAG over 137 clinical documents from PubMed, OpenFDA,
                   MedlinePlus, and ACOG/WHO/CDC guidelines. It includes 5-layer
                   clinical guardrails modeled after NeMo, extended thinking for
