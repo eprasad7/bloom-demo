@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatMessage } from "@/components/ChatMessage";
 import { GuardrailInspector } from "@/components/GuardrailInspector";
 import { CareJourney } from "@/components/CareJourney";
@@ -35,7 +35,10 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") return sessionStorage.getItem("bloom_session_id");
+    return null;
+  });
   const [activeGuardrails, setActiveGuardrails] = useState<GuardrailLog | null>(null);
   const [activeRisk, setActiveRisk] = useState<RiskLevel>("safe");
   const [journey, setJourney] = useState<JourneyEntry[]>([]);
@@ -60,6 +63,27 @@ export default function App() {
   const streamingTextRef = useRef("");
   const streamingThinkingRef = useRef("");
   const streamingGuidelinesRef = useRef<RetrievedGuideline[]>([]);
+
+  // Restore conversation from backend on page reload
+  useEffect(() => {
+    if (!sessionId) return;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+    fetch(`${apiBase}/api/sessions/${sessionId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.messages && data.messages.length > 0) {
+          setMessages(
+            data.messages.map((m: { role: string; content: string }) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            }))
+          );
+          if (data.journey) setJourney(data.journey);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(
@@ -94,7 +118,10 @@ export default function App() {
 
       try {
         await sendMessageStream(text, sessionId, {
-          onSession: (id) => setSessionId(id),
+          onSession: (id) => {
+            setSessionId(id);
+            sessionStorage.setItem("bloom_session_id", id);
+          },
 
           onInputRails: (result) => {
             inputRailResult = result;
